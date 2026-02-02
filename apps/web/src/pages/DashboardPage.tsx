@@ -3,15 +3,14 @@ import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
   FolderKanban,
-  DollarSign,
-  CheckCircle2,
-  Clock,
-  Plus,
-  ArrowUpRight,
   TrendingUp,
-  Users,
+  TrendingDown,
+  ArrowUpRight,
+  Clock,
   AlertTriangle,
-  ChevronRight,
+  CheckCircle,
+  BarChart3,
+  DollarSign,
 } from "lucide-react";
 import { projectsApi } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
@@ -29,7 +28,7 @@ function useAnimatedCounter(end: number, duration: number = 1500) {
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
       setCount(Math.floor(eased * end));
       if (progress < 1) {
         animationFrame = requestAnimationFrame(animate);
@@ -41,6 +40,130 @@ function useAnimatedCounter(end: number, duration: number = 1500) {
   }, [end, duration]);
 
   return count;
+}
+
+// Metric Card Component - Floating/Sunken Style
+function MetricCard({
+  label,
+  value,
+  change,
+  changeType,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  change?: string;
+  changeType?: "positive" | "negative" | "neutral";
+  icon: any;
+}) {
+  const animatedValue =
+    typeof value === "number" ? useAnimatedCounter(value) : value;
+
+  return (
+    <div className="bg-[#0A0A0A] border border-[#1A1A1A] p-6 group hover:border-[#2A2A2A] transition-all duration-500">
+      <div className="flex items-start justify-between mb-6">
+        <div className="w-10 h-10 border border-[#2A2A2A] flex items-center justify-center text-[#4A5568] group-hover:text-[#A68B5B] group-hover:border-[#A68B5B]/30 transition-all duration-500">
+          <Icon className="w-5 h-5" strokeWidth={1.5} />
+        </div>
+        {change && (
+          <div
+            className={`flex items-center gap-1 text-xs tracking-wide ${
+              changeType === "positive"
+                ? "text-[#4A9079]"
+                : changeType === "negative"
+                  ? "text-[#9E534F]"
+                  : "text-[#4A5568]"
+            }`}
+          >
+            {changeType === "positive" ? (
+              <TrendingUp className="w-3 h-3" />
+            ) : changeType === "negative" ? (
+              <TrendingDown className="w-3 h-3" />
+            ) : null}
+            {change}
+          </div>
+        )}
+      </div>
+      <div className="text-3xl font-medium text-white tracking-tight mb-1">
+        {animatedValue}
+      </div>
+      <div className="text-xs tracking-[0.15em] text-[#4A5568] uppercase">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+// Project Row Component
+function ProjectRow({ project }: { project: any }) {
+  const statusColors: Record<string, string> = {
+    active: "bg-[#4A9079]",
+    planning: "bg-[#A68B5B]",
+    completed: "bg-[#4A5568]",
+    on_hold: "bg-[#9E534F]",
+  };
+
+  return (
+    <Link
+      to={`/projects/${project.id}`}
+      className="flex items-center justify-between py-4 border-b border-[#1A1A1A] last:border-0 group hover:bg-white/[0.01] transition-colors duration-300 -mx-6 px-6"
+    >
+      <div className="flex items-center gap-4">
+        <div
+          className={`w-1.5 h-1.5 rounded-full ${statusColors[project.status] || statusColors.active}`}
+        />
+        <div>
+          <p className="text-white font-medium text-sm group-hover:text-[#A68B5B] transition-colors duration-300">
+            {project.name}
+          </p>
+          <p className="text-xs text-[#4A5568] mt-0.5">
+            {project.client || "—"}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-8">
+        <div className="text-right">
+          <p className="text-sm text-white">
+            {formatCurrency(project.budget || 0)}
+          </p>
+          <p className="text-xs text-[#4A5568]">Budget</p>
+        </div>
+        <ArrowUpRight className="w-4 h-4 text-[#3A3A3A] group-hover:text-[#A68B5B] transition-colors duration-300" />
+      </div>
+    </Link>
+  );
+}
+
+// Activity Item Component
+function ActivityItem({ activity }: { activity: any }) {
+  return (
+    <div className="flex items-start gap-4 py-3 border-b border-[#1A1A1A] last:border-0">
+      <div className="w-8 h-8 border border-[#2A2A2A] flex items-center justify-center text-[#4A5568] mt-0.5">
+        <Clock className="w-4 h-4" strokeWidth={1.5} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-[#E1E1E1]">{activity.description}</p>
+        <p className="text-xs text-[#4A5568] mt-1">{activity.time}</p>
+      </div>
+    </div>
+  );
+}
+
+// Mini Chart Component (Monochromatic)
+function MiniChart() {
+  const bars = [35, 55, 45, 70, 60, 80, 65, 75, 50, 85, 70, 90];
+
+  return (
+    <div className="flex items-end justify-between gap-1 h-24">
+      {bars.map((height, i) => (
+        <div
+          key={i}
+          className="flex-1 bg-[#2A2A2A] hover:bg-[#A68B5B]/40 transition-colors duration-300 cursor-pointer"
+          style={{ height: `${height}%` }}
+        />
+      ))}
+    </div>
+  );
 }
 
 export function DashboardPage() {
@@ -63,404 +186,199 @@ export function DashboardPage() {
     ),
   };
 
-  // Get current time greeting
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
-  };
+  // Mock activity data
+  const recentActivity = [
+    {
+      id: 1,
+      description: "Budget revised for Meridian Tower",
+      time: "2 hours ago",
+    },
+    {
+      id: 2,
+      description: "New permit approved - Coastal Residence",
+      time: "4 hours ago",
+    },
+    { id: 3, description: "Phase 2 milestone completed", time: "Yesterday" },
+  ];
+
+  // Mock alerts
+  const alerts = [
+    {
+      id: 1,
+      type: "warning",
+      message: "Budget threshold reached - Urban Core",
+      project: "Urban Core Complex",
+    },
+    {
+      id: 2,
+      type: "info",
+      message: "Permit renewal due in 14 days",
+      project: "Skybridge Pavilion",
+    },
+  ];
 
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--charcoal)]">
-          {getGreeting()}, {user?.name?.split(" ")[0]}!
-        </h1>
-        <p className="text-[var(--stone)] mt-1">
-          Here's what's happening across your projects today.
+      <div className="mb-10">
+        <p className="text-xs tracking-[0.2em] text-[#A68B5B] uppercase mb-3">
+          Command Center
         </p>
+        <h1 className="text-3xl font-medium text-white tracking-tight">
+          Portfolio Overview
+        </h1>
       </div>
 
-      {/* Bento Grid Layout */}
-      <div className="grid grid-cols-12 gap-6">
-        {/* Stats Row - 4 cards */}
-        <StatCard
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-4 gap-4 mb-8">
+        <MetricCard
           icon={FolderKanban}
           label="Total Projects"
-          value={stats.total}
-          trend="+12%"
-          trendUp
-          className="col-span-3"
+          value={stats.total || 12}
+          change="+2 this month"
+          changeType="positive"
         />
-        <StatCard
+        <MetricCard
           icon={Clock}
-          label="Active"
-          value={stats.active}
-          trend="On track"
-          trendUp
-          accentColor="teal"
-          className="col-span-3"
+          label="Active Projects"
+          value={stats.active || 8}
+          change="On track"
+          changeType="neutral"
         />
-        <StatCard
-          icon={CheckCircle2}
+        <MetricCard
+          icon={CheckCircle}
           label="Completed"
-          value={stats.completed}
-          trend="+3 this month"
-          trendUp
-          accentColor="sage"
-          className="col-span-3"
+          value={stats.completed || 4}
+          change="+33%"
+          changeType="positive"
         />
-        <StatCard
+        <MetricCard
           icon={DollarSign}
-          label="Total Budget"
-          value={formatCurrency(stats.budget)}
-          trend="8% under"
-          trendUp
-          accentColor="bronze"
-          className="col-span-3"
-          isCurrency
+          label="Budget Under Mgmt"
+          value={formatCurrency(stats.budget || 2400000)}
         />
+      </div>
 
-        {/* Main Project Overview - Large Card */}
-        <div className="col-span-8 bento-card">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Projects List - Large Card */}
+        <div className="col-span-8 bg-[#0A0A0A] border border-[#1A1A1A] p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-semibold text-[var(--charcoal)]">
-                Recent Projects
+              <h2 className="text-lg font-medium text-white">
+                Active Projects
               </h2>
-              <p className="text-sm text-[var(--stone)]">
-                Your latest activity
+              <p className="text-xs text-[#4A5568] mt-1">
+                Real-time portfolio status
               </p>
             </div>
             <Link
               to="/projects"
-              className="flex items-center gap-2 text-[var(--teal)] hover:text-[var(--teal-light)] font-medium text-sm transition-colors"
+              className="text-xs tracking-[0.1em] text-[#A68B5B] hover:text-white transition-colors uppercase"
             >
-              View all
-              <ChevronRight className="h-4 w-4" />
+              View All
             </Link>
           </div>
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 border-4 border-[var(--teal)] border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 rounded-2xl bg-[var(--sand)] flex items-center justify-center mx-auto mb-4">
-                <FolderKanban className="h-8 w-8 text-[var(--stone)]" />
-              </div>
-              <h3 className="font-semibold text-[var(--charcoal)] mb-2">
-                No projects yet
-              </h3>
-              <p className="text-[var(--stone)] mb-6">
-                Get started by creating your first project.
-              </p>
-              <Link
-                to="/projects"
-                className="btn-primary inline-flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Create Project
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
+            <div className="py-12 text-center text-[#4A5568]">Loading...</div>
+          ) : projects.length > 0 ? (
+            <div>
               {projects.slice(0, 5).map((project: any) => (
                 <ProjectRow key={project.id} project={project} />
               ))}
             </div>
+          ) : (
+            <div className="py-12 text-center">
+              <p className="text-[#4A5568] mb-4">No projects yet</p>
+              <Link
+                to="/projects/new"
+                className="text-[#A68B5B] text-sm hover:text-white transition-colors"
+              >
+                Create your first project →
+              </Link>
+            </div>
           )}
         </div>
 
-        {/* Quick Actions - Side Card */}
+        {/* Right Column */}
         <div className="col-span-4 space-y-6">
-          {/* Quick Actions */}
-          <div className="bento-card">
-            <h3 className="font-semibold text-[var(--charcoal)] mb-4">
-              Quick Actions
+          {/* Alerts Card */}
+          <div className="bg-[#0A0A0A] border border-[#1A1A1A] p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle
+                className="w-4 h-4 text-[#A68B5B]"
+                strokeWidth={1.5}
+              />
+              <h3 className="text-sm font-medium text-white">Alerts</h3>
+            </div>
+            <div className="space-y-3">
+              {alerts.map((alert) => (
+                <div
+                  key={alert.id}
+                  className="py-3 border-b border-[#1A1A1A] last:border-0"
+                >
+                  <p className="text-sm text-[#E1E1E1]">{alert.message}</p>
+                  <p className="text-xs text-[#4A5568] mt-1">{alert.project}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Activity Card */}
+          <div className="bg-[#0A0A0A] border border-[#1A1A1A] p-6">
+            <h3 className="text-sm font-medium text-white mb-4">
+              Recent Activity
             </h3>
-            <div className="space-y-2">
-              <QuickAction
-                icon={Plus}
-                label="Create New Project"
-                to="/projects"
-              />
-              <QuickAction
-                icon={Users}
-                label="Invite Team Member"
-                to="/settings/team"
-              />
-              <QuickAction
-                icon={Clock}
-                label="View Activity Log"
-                to="/activity"
-              />
+            <div>
+              {recentActivity.map((activity) => (
+                <ActivityItem key={activity.id} activity={activity} />
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* Alerts */}
-          <div className="bento-card bg-[var(--terracotta)]/5 border border-[var(--terracotta)]/20">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[var(--terracotta)]/20 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="h-5 w-5 text-[var(--terracotta)]" />
-              </div>
+        {/* Analytics Card - Full Width */}
+        <div className="col-span-12 bg-[#0A0A0A] border border-[#1A1A1A] p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="w-5 h-5 text-[#4A5568]" strokeWidth={1.5} />
               <div>
-                <h3 className="font-semibold text-[var(--charcoal)] mb-1">
-                  2 permits expiring
+                <h3 className="text-sm font-medium text-white">
+                  Budget Performance
                 </h3>
-                <p className="text-sm text-[var(--stone)]">
-                  Review permits before they expire to avoid project delays.
+                <p className="text-xs text-[#4A5568]">
+                  Monthly expenditure trend
                 </p>
-                <button className="text-sm text-[var(--terracotta)] font-medium mt-2 hover:underline">
-                  View permits →
-                </button>
               </div>
             </div>
+            <div className="flex items-center gap-4 text-xs text-[#4A5568]">
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-[#2A2A2A]" />
+                Actual
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-[#A68B5B]/40" />
+                Projected
+              </span>
+            </div>
+          </div>
+          <MiniChart />
+          <div className="flex justify-between mt-4 text-xs text-[#4A5568]">
+            <span>Jan</span>
+            <span>Feb</span>
+            <span>Mar</span>
+            <span>Apr</span>
+            <span>May</span>
+            <span>Jun</span>
+            <span>Jul</span>
+            <span>Aug</span>
+            <span>Sep</span>
+            <span>Oct</span>
+            <span>Nov</span>
+            <span>Dec</span>
           </div>
         </div>
-
-        {/* Bottom Row - Activity & Budget */}
-        <div className="col-span-6 bento-card">
-          <h3 className="font-semibold text-[var(--charcoal)] mb-4">
-            Budget Overview
-          </h3>
-          <div className="space-y-4">
-            <BudgetBar label="Labor" spent={45000} total={60000} />
-            <BudgetBar label="Materials" spent={32000} total={50000} />
-            <BudgetBar label="Equipment" spent={12000} total={15000} />
-            <BudgetBar label="Permits" spent={8000} total={10000} />
-          </div>
-        </div>
-
-        <div className="col-span-6 bento-card">
-          <h3 className="font-semibold text-[var(--charcoal)] mb-4">
-            Recent Activity
-          </h3>
-          <div className="space-y-4">
-            <ActivityItem
-              user="Sarah Chen"
-              action="updated the budget for"
-              target="Skyline Tower"
-              time="2 min ago"
-            />
-            <ActivityItem
-              user="Marcus Johnson"
-              action="completed task in"
-              target="Riverside Complex"
-              time="15 min ago"
-            />
-            <ActivityItem
-              user="Emily Rodriguez"
-              action="uploaded 5 photos to"
-              target="Harbor View"
-              time="1 hour ago"
-            />
-            <ActivityItem
-              user="David Kim"
-              action="approved daily report for"
-              target="Central Plaza"
-              time="2 hours ago"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Stat Card Component
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  trend,
-  trendUp,
-  accentColor = "mocha",
-  className = "",
-  isCurrency = false,
-}: {
-  icon: any;
-  label: string;
-  value: string | number;
-  trend?: string;
-  trendUp?: boolean;
-  accentColor?: string;
-  className?: string;
-  isCurrency?: boolean;
-}) {
-  const numericValue =
-    typeof value === "number"
-      ? value
-      : parseInt(value.replace(/[^0-9]/g, "")) || 0;
-  const animatedValue = useAnimatedCounter(isCurrency ? 0 : numericValue);
-
-  const colors: Record<string, string> = {
-    mocha: "from-[var(--mocha)] to-[var(--mocha-light)]",
-    teal: "from-[var(--teal)] to-[var(--teal-light)]",
-    sage: "from-[var(--sage)] to-[var(--sage-light)]",
-    bronze: "from-[var(--bronze)] to-[#D4A84B]",
-  };
-
-  return (
-    <div className={`bento-card group ${className}`}>
-      <div className="flex items-start justify-between">
-        <div
-          className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${colors[accentColor]} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}
-        >
-          <Icon className="h-6 w-6 text-white" />
-        </div>
-        {trend && (
-          <span
-            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
-              trendUp
-                ? "bg-[var(--sage)]/10 text-[var(--sage)]"
-                : "bg-[var(--terracotta)]/10 text-[var(--terracotta)]"
-            }`}
-          >
-            {trendUp && <TrendingUp className="h-3 w-3" />}
-            {trend}
-          </span>
-        )}
-      </div>
-      <div className="mt-4">
-        <p className="text-3xl font-bold text-[var(--charcoal)] tabular-nums">
-          {isCurrency ? value : animatedValue.toLocaleString()}
-        </p>
-        <p className="text-sm text-[var(--stone)] mt-1">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-// Project Row Component
-function ProjectRow({ project }: { project: any }) {
-  const statusColors: Record<string, string> = {
-    planning: "bg-[var(--stone)]/10 text-[var(--stone)]",
-    active: "bg-[var(--teal)]/10 text-[var(--teal)]",
-    on_hold: "bg-[var(--terracotta)]/10 text-[var(--terracotta)]",
-    completed: "bg-[var(--sage)]/10 text-[var(--sage)]",
-    cancelled: "bg-red-100 text-red-600",
-  };
-
-  return (
-    <Link
-      to={`/projects/${project.id}`}
-      className="flex items-center justify-between p-4 rounded-xl bg-[var(--ivory)] hover:bg-[var(--sand)]/50 transition-all group"
-    >
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--teal)] to-[var(--mocha)] flex items-center justify-center text-white font-bold text-lg">
-          {project.name?.charAt(0)}
-        </div>
-        <div>
-          <h4 className="font-semibold text-[var(--charcoal)] group-hover:text-[var(--teal)] transition-colors">
-            {project.name}
-          </h4>
-          <p className="text-sm text-[var(--stone)]">
-            {project.projectType || "Construction"}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-4">
-        <span
-          className={`px-3 py-1 text-xs font-medium rounded-full capitalize ${
-            statusColors[project.status] || statusColors.planning
-          }`}
-        >
-          {project.status?.replace("_", " ")}
-        </span>
-        <ArrowUpRight className="h-5 w-5 text-[var(--stone)] group-hover:text-[var(--teal)] transition-colors" />
-      </div>
-    </Link>
-  );
-}
-
-// Quick Action Component
-function QuickAction({
-  icon: Icon,
-  label,
-  to,
-}: {
-  icon: any;
-  label: string;
-  to: string;
-}) {
-  return (
-    <Link
-      to={to}
-      className="flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--sand)]/50 transition-colors group"
-    >
-      <div className="w-10 h-10 rounded-xl bg-[var(--sand)] flex items-center justify-center group-hover:bg-[var(--teal)] group-hover:text-white transition-colors">
-        <Icon className="h-5 w-5 text-[var(--stone)] group-hover:text-white transition-colors" />
-      </div>
-      <span className="font-medium text-[var(--charcoal)]">{label}</span>
-    </Link>
-  );
-}
-
-// Budget Bar Component
-function BudgetBar({
-  label,
-  spent,
-  total,
-}: {
-  label: string;
-  spent: number;
-  total: number;
-}) {
-  const percentage = Math.min((spent / total) * 100, 100);
-  const isOver = spent > total;
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-[var(--charcoal)]">
-          {label}
-        </span>
-        <span className="text-sm text-[var(--stone)]">
-          {formatCurrency(spent)} / {formatCurrency(total)}
-        </span>
-      </div>
-      <div className="h-2 bg-[var(--sand)] rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${
-            isOver
-              ? "bg-[var(--terracotta)]"
-              : "bg-gradient-to-r from-[var(--teal)] to-[var(--teal-light)]"
-          }`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-// Activity Item Component
-function ActivityItem({
-  user,
-  action,
-  target,
-  time,
-}: {
-  user: string;
-  action: string;
-  target: string;
-  time: string;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--teal)] to-[var(--mocha)] flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
-        {user.charAt(0)}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-[var(--charcoal)]">
-          <span className="font-medium">{user}</span>{" "}
-          <span className="text-[var(--stone)]">{action}</span>{" "}
-          <span className="font-medium">{target}</span>
-        </p>
-        <p className="text-xs text-[var(--stone)] mt-0.5">{time}</p>
       </div>
     </div>
   );

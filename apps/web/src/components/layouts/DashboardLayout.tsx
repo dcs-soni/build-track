@@ -5,23 +5,26 @@ import {
   Users,
   Settings,
   LogOut,
-  Building2,
   Clock,
   Search,
   Bell,
-  ChevronDown,
+  BarChart3,
+  FileText,
+  Briefcase,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
 
 const navItems = [
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/dashboard", icon: LayoutDashboard, label: "Overview" },
   { to: "/projects", icon: FolderKanban, label: "Projects" },
-  { to: "/subcontractors", icon: Users, label: "Subcontractors" },
+  { to: "/budget-analytics", icon: BarChart3, label: "Analytics" },
+  { to: "/subcontractors", icon: Briefcase, label: "Contractors" },
+  { to: "/daily-reports", icon: FileText, label: "Reports" },
   { to: "/activity", icon: Clock, label: "Activity" },
-  { to: "/settings/team", icon: Users, label: "Team" },
 ];
 
 const secondaryNavItems = [
+  { to: "/settings/team", icon: Users, label: "Team" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -35,115 +38,132 @@ export function DashboardLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-[var(--ivory)]">
-      {/* Premium Sidebar */}
-      <aside className="w-64 bg-[var(--charcoal)] flex flex-col relative overflow-hidden">
-        {/* Subtle gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
-
+    <div className="flex h-screen bg-[#0A0A0A]">
+      {/* Ultra-Slim Obsidian Sidebar */}
+      <aside className="w-64 bg-[#0A0A0A] border-r border-[#1A1A1A] flex flex-col">
         {/* Logo */}
-        <div className="p-5 border-b border-white/10">
+        <div className="h-20 flex items-center px-6 border-b border-[#1A1A1A]">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[var(--teal)] to-[var(--mocha)] flex items-center justify-center shadow-lg">
-              <Building2 className="h-6 w-6 text-white" />
+            <div className="w-10 h-10 border border-[#3A3A3A] flex items-center justify-center">
+              <span className="text-white font-medium text-lg tracking-tighter">
+                B
+              </span>
             </div>
-            <span className="font-bold text-lg text-white">BuildTrack</span>
+            <div>
+              <span className="text-white font-medium tracking-tight block">
+                BuildTrack
+              </span>
+              <span className="text-[10px] tracking-[0.2em] text-[#4A5568] uppercase">
+                Atrium
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Main Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
-          <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold px-3 mb-3">
-            Main Menu
+        <nav className="flex-1 py-6 px-4">
+          <p className="text-[10px] tracking-[0.2em] text-[#4A5568] uppercase px-3 mb-4">
+            Navigation
           </p>
-          {navItems.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `sidebar-item relative ${isActive ? "active" : ""}`
-              }
-            >
-              <Icon className="h-5 w-5" />
-              {label}
-            </NavLink>
-          ))}
-
-          <div className="pt-6 pb-2">
-            <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold px-3 mb-3">
-              Settings
-            </p>
+          <div className="space-y-1">
+            {navItems.map(({ to, icon: Icon, label }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 text-sm transition-all duration-300 group ${
+                    isActive
+                      ? "text-[#A68B5B] bg-[#A68B5B]/5 border-l-2 border-[#A68B5B] -ml-px"
+                      : "text-[#718096] hover:text-white hover:bg-white/[0.02]"
+                  }`
+                }
+              >
+                <Icon className="h-4 w-4" strokeWidth={1.5} />
+                <span className="font-medium tracking-wide">{label}</span>
+              </NavLink>
+            ))}
           </div>
-          {secondaryNavItems.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `sidebar-item relative ${isActive ? "active" : ""}`
-              }
-            >
-              <Icon className="h-5 w-5" />
-              {label}
-            </NavLink>
-          ))}
+
+          <div className="mt-8 pt-6 border-t border-[#1A1A1A]">
+            <p className="text-[10px] tracking-[0.2em] text-[#4A5568] uppercase px-3 mb-4">
+              System
+            </p>
+            <div className="space-y-1">
+              {secondaryNavItems.map(({ to, icon: Icon, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2.5 text-sm transition-all duration-300 ${
+                      isActive
+                        ? "text-[#A68B5B] bg-[#A68B5B]/5 border-l-2 border-[#A68B5B] -ml-px"
+                        : "text-[#718096] hover:text-white hover:bg-white/[0.02]"
+                    }`
+                  }
+                >
+                  <Icon className="h-4 w-4" strokeWidth={1.5} />
+                  <span className="font-medium tracking-wide">{label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
         </nav>
 
         {/* User Profile */}
-        <div className="p-4 border-t border-white/10">
-          <div className="flex items-center gap-3 mb-3 p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[var(--teal)] to-[var(--mocha)] flex items-center justify-center text-white font-semibold shadow-lg">
+        <div className="p-4 border-t border-[#1A1A1A]">
+          <div className="flex items-center gap-3 p-3 hover:bg-white/[0.02] transition-colors cursor-pointer group">
+            <div className="w-9 h-9 border border-[#3A3A3A] flex items-center justify-center text-white text-sm font-medium">
               {user?.name?.charAt(0) || "U"}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
+              <p className="text-sm text-white truncate">
                 {user?.name || "User"}
               </p>
-              <p className="text-xs text-white/50 truncate">{user?.email}</p>
+              <p className="text-xs text-[#4A5568] truncate">{user?.email}</p>
             </div>
-            <ChevronDown className="h-4 w-4 text-white/50" />
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2 mt-2 text-xs tracking-[0.1em] text-[#4A5568] hover:text-[#A68B5B] transition-colors uppercase"
           >
-            <LogOut className="h-4 w-4" />
-            Sign out
+            <LogOut className="h-3.5 w-3.5" strokeWidth={1.5} />
+            Sign Out
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Header */}
-        <header className="h-16 bg-white/80 backdrop-blur-sm border-b border-[var(--sand)] flex items-center justify-between px-6">
+        {/* Top Header - Minimal */}
+        <header className="h-16 bg-[#0A0A0A] border-b border-[#1A1A1A] flex items-center justify-between px-8">
           {/* Search */}
           <div className="relative w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--stone)]" />
+            <Search className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4A5568]" />
             <input
               type="text"
-              placeholder="Search projects, tasks..."
-              className="w-full h-10 pl-10 pr-4 bg-[var(--cream)] border border-[var(--sand)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--teal)]/20 focus:border-[var(--teal)] transition-all"
+              placeholder="Search projects, reports..."
+              className="w-full h-10 pl-8 pr-4 bg-transparent border-0 border-b border-[#1A1A1A] text-white text-sm placeholder-[#4A5568] focus:outline-none focus:border-[#A68B5B] transition-colors duration-500"
             />
           </div>
 
           {/* Right side actions */}
-          <div className="flex items-center gap-4">
-            <button className="relative h-10 w-10 flex items-center justify-center rounded-xl bg-[var(--cream)] hover:bg-[var(--sand)] transition-colors">
-              <Bell className="h-5 w-5 text-[var(--stone)]" />
-              <span className="absolute top-2 right-2 h-2 w-2 bg-[var(--terracotta)] rounded-full" />
+          <div className="flex items-center gap-6">
+            <button className="relative p-2 text-[#4A5568] hover:text-white transition-colors">
+              <Bell className="h-5 w-5" strokeWidth={1.5} />
+              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-[#A68B5B] rounded-full" />
             </button>
 
-            <div className="h-6 w-px bg-[var(--sand)]" />
+            <div className="h-6 w-px bg-[#1A1A1A]" />
 
-            <button className="flex items-center gap-2 px-4 h-10 bg-[var(--teal)] text-white rounded-xl font-medium text-sm hover:bg-[var(--teal-light)] transition-colors">
-              <FolderKanban className="h-4 w-4" />
+            <button className="flex items-center gap-2 px-5 py-2.5 border border-[#A68B5B] text-[#A68B5B] text-xs font-medium tracking-[0.1em] uppercase hover:bg-[#A68B5B] hover:text-[#0A0A0A] transition-all duration-500">
+              <FolderKanban className="h-4 w-4" strokeWidth={1.5} />
               New Project
             </button>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto bg-[#111111] p-8">
           <Outlet />
         </main>
       </div>

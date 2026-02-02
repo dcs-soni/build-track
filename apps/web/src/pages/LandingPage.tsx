@@ -185,7 +185,9 @@ export function LandingPage() {
       {/* Navigation */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
-          scrolled ? "glass-panel py-4" : "py-6"
+          scrolled
+            ? "bg-[#0A0A0A]/90 backdrop-blur-xl border-b border-[#1A1A1A] py-4"
+            : "py-6"
         }`}
       >
         <div className="container flex items-center justify-between">

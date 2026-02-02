@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Building2, Loader2 } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
 import { authApi } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 
@@ -42,114 +42,182 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 mb-4">
-            <Building2 className="h-8 w-8 text-white" />
+    <div className="min-h-screen flex bg-[#0A0A0A]">
+      {/* Left Panel - Architectural Imagery */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        {/* Background Image */}
+        <img
+          src="https://images.unsplash.com/photo-1511818966892-d7d671e672a2?w=1200&q=80"
+          alt="Modern architecture"
+          className="absolute inset-0 w-full h-full object-cover grayscale-[60%]"
+        />
+
+        {/* Gradient Overlays */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#0A0A0A]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/80 via-transparent to-[#0A0A0A]/40" />
+
+        {/* Content Overlay */}
+        <div className="relative z-10 flex flex-col justify-end p-16">
+          <div className="max-w-md">
+            <p className="text-xs tracking-[0.3em] text-[#A68B5B] mb-4 uppercase">
+              Begin Your Journey
+            </p>
+            <h2 className="text-4xl font-medium text-white leading-tight tracking-tight mb-6">
+              Join the Elite
+              <br />
+              Circle of Builders
+            </h2>
+            <div className="w-16 h-px bg-[#A68B5B]" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Create account</h1>
-          <p className="text-gray-400 mt-2">
-            Start managing your projects with BuildTrack
-          </p>
         </div>
+      </div>
 
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/10"
-        >
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
-              {error}
+      {/* Right Panel - The Vault Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-16">
+        <div className="w-full max-w-md">
+          {/* Logo & Header */}
+          <div className="mb-12">
+            <div className="flex items-center gap-4 mb-12">
+              <div className="w-12 h-12 border border-[#3A3A3A] flex items-center justify-center">
+                <span className="text-white font-medium text-lg tracking-tighter">
+                  B
+                </span>
+              </div>
+              <span className="text-white font-medium tracking-tight">
+                BuildTrack
+              </span>
             </div>
-          )}
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-1">
-                Name
+            <h1 className="text-3xl md:text-4xl font-medium text-white tracking-tight mb-4">
+              Request Access
+            </h1>
+            <p className="text-[#718096] text-sm tracking-wide">
+              Register for exclusive access to our construction intelligence
+              platform
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {error && (
+              <div className="p-4 border border-red-500/30 bg-red-500/10 text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* Name Field */}
+            <div className="group">
+              <label className="block text-xs tracking-[0.2em] text-[#718096] uppercase mb-3">
+                Full Name
               </label>
-              <input
-                {...register("name", { required: "Name is required" })}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="John Doe"
-              />
+              <div className="relative">
+                <input
+                  {...register("name", { required: "Name is required" })}
+                  className="w-full bg-transparent border-0 border-b border-[#3A3A3A] text-white text-lg py-3 px-0 placeholder-[#4A5568] focus:outline-none focus:border-[#A68B5B] transition-colors duration-500"
+                  placeholder="James Morrison"
+                />
+                <div className="absolute bottom-0 left-0 w-0 h-px bg-[#A68B5B] group-focus-within:w-full transition-all duration-500" />
+              </div>
               {errors.name && (
-                <p className="mt-1 text-sm text-red-400">
+                <p className="mt-2 text-xs text-red-400">
                   {errors.name.message}
                 </p>
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-1">
-                Email
+            {/* Email Field */}
+            <div className="group">
+              <label className="block text-xs tracking-[0.2em] text-[#718096] uppercase mb-3">
+                Email Address
               </label>
-              <input
-                type="email"
-                {...register("email", { required: "Email is required" })}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="you@example.com"
-              />
+              <div className="relative">
+                <input
+                  type="email"
+                  {...register("email", { required: "Email is required" })}
+                  className="w-full bg-transparent border-0 border-b border-[#3A3A3A] text-white text-lg py-3 px-0 placeholder-[#4A5568] focus:outline-none focus:border-[#A68B5B] transition-colors duration-500"
+                  placeholder="james@morrison-capital.com"
+                />
+                <div className="absolute bottom-0 left-0 w-0 h-px bg-[#A68B5B] group-focus-within:w-full transition-all duration-500" />
+              </div>
               {errors.email && (
-                <p className="mt-1 text-sm text-red-400">
+                <p className="mt-2 text-xs text-red-400">
                   {errors.email.message}
                 </p>
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-1">
-                Password
+            {/* Password Field */}
+            <div className="group">
+              <label className="block text-xs tracking-[0.2em] text-[#718096] uppercase mb-3">
+                Create Passphrase
               </label>
-              <input
-                type="password"
-                {...register("password", {
-                  required: "Password is required",
-                  minLength: { value: 8, message: "Min 8 characters" },
-                })}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  type="password"
+                  {...register("password", {
+                    required: "Password is required",
+                    minLength: { value: 8, message: "Minimum 8 characters" },
+                  })}
+                  className="w-full bg-transparent border-0 border-b border-[#3A3A3A] text-white text-lg py-3 px-0 placeholder-[#4A5568] focus:outline-none focus:border-[#A68B5B] transition-colors duration-500"
+                  placeholder="••••••••••••"
+                />
+                <div className="absolute bottom-0 left-0 w-0 h-px bg-[#A68B5B] group-focus-within:w-full transition-all duration-500" />
+              </div>
               {errors.password && (
-                <p className="mt-1 text-sm text-red-400">
+                <p className="mt-2 text-xs text-red-400">
                   {errors.password.message}
                 </p>
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-1">
-                Company Name (optional)
+            {/* Company Field */}
+            <div className="group">
+              <label className="block text-xs tracking-[0.2em] text-[#718096] uppercase mb-3">
+                Organization <span className="text-[#4A5568]">(Optional)</span>
               </label>
-              <input
-                {...register("tenantName")}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Acme Construction"
-              />
+              <div className="relative">
+                <input
+                  {...register("tenantName")}
+                  className="w-full bg-transparent border-0 border-b border-[#3A3A3A] text-white text-lg py-3 px-0 placeholder-[#4A5568] focus:outline-none focus:border-[#A68B5B] transition-colors duration-500"
+                  placeholder="Morrison Capital Partners"
+                />
+                <div className="absolute bottom-0 left-0 w-0 h-px bg-[#A68B5B] group-focus-within:w-full transition-all duration-500" />
+              </div>
             </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={registerMutation.isPending}
+              className="w-full mt-6 py-4 bg-transparent border border-[#A68B5B] text-[#A68B5B] text-sm font-medium tracking-[0.15em] uppercase hover:bg-[#A68B5B] hover:text-[#0A0A0A] transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
+            >
+              {registerMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <>
+                  <span>Request Access</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Footer Link */}
+          <div className="mt-12 pt-8 border-t border-[#1A1A1A]">
+            <p className="text-sm text-[#4A5568]">
+              Already a member?{" "}
+              <Link
+                to="/login"
+                className="text-[#A68B5B] hover:text-white transition-colors duration-300"
+              >
+                Enter the Residence
+              </Link>
+            </p>
           </div>
-
-          <button
-            type="submit"
-            disabled={registerMutation.isPending}
-            className="w-full mt-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {registerMutation.isPending && (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            )}
-            {registerMutation.isPending
-              ? "Creating account..."
-              : "Create account"}
-          </button>
-
-          <p className="mt-6 text-center text-gray-400">
-            Already have an account?{" "}
-            <Link to="/login" className="text-blue-400 hover:text-blue-300">
-              Sign in
-            </Link>
-          </p>
-        </form>
+        </div>
       </div>
     </div>
   );
