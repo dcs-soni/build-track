@@ -1,0 +1,538 @@
+// Multi-tenant Real Estate & Construction Management Platform Schema
+// Updated with 10 new features
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// TENANTS & USERS
+// ============================================================================
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(255)
+  slug      String   @unique @db.VarChar(100)
+  plan      String   @default("free") @db.VarChar(50)
+  settings  Json     @default("{}")
+  logoUrl   String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships    TenantMembership[]
+  projects       Project[]
+  subcontractors Subcontractor[]
+  invitations    Invitation[]
+  activityLogs   ActivityLog[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique @db.VarChar(255)
+  passwordHash String?   @db.VarChar(255)
+  name         String    @db.VarChar(255)
+  avatarUrl    String?   @db.VarChar(500)
+  phone        String?   @db.VarChar(50)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  memberships      TenantMembership[]
+  createdProjects  Project[]          @relation("ProjectCreator")
+  assignedTasks    Task[]             @relation("TaskAssignee")
+  dailyReports     DailyReport[]
+  documents        Document[]
+  notifications    Notification[]
+  uploadedPhotos   Photo[]
+  createdExpenses  Expense[]
+  activityLogs     ActivityLog[]
+  sentInvitations  Invitation[]
+
+  @@map("users")
+}
+
+model TenantMembership {
+  id          String   @id @default(uuid())
+  tenantId    String
+  userId      String
+  role        String   @db.VarChar(50) // owner, admin, manager, member, viewer, client
+  permissions Json     @default("[]")
+  joinedAt    DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+  @@index([userId])
+  @@map("tenant_memberships")
+}
+
+// ============================================================================
+// TEAM INVITATIONS (Feature 6)
+// ============================================================================
+
+model Invitation {
+  id         String    @id @default(uuid())
+  tenantId   String
+  email      String    @db.VarChar(255)
+  role       String    @db.VarChar(50)
+  token      String    @unique @db.VarChar(100)
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  invitedBy  String
+  createdAt  DateTime  @default(now())
+
+  tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inviter User   @relation(fields: [invitedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([token])
+  @@map("invitations")
+}
+
+// ============================================================================
+// PROJECTS
+// ============================================================================
+
+model Project {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  projectType String?  @db.VarChar(50)
+  status      String   @default("planning") @db.VarChar(50)
+
+  address    String? @db.Text
+  city       String? @db.VarChar(100)
+  state      String? @db.VarChar(100)
+  postalCode String? @db.VarChar(20)
+  country    String? @db.VarChar(100)
+  latitude   Float?
+  longitude  Float?
+
+  startDate    DateTime? @db.Date
+  estimatedEnd DateTime? @db.Date
+  actualEnd    DateTime? @db.Date
+
+  budget   Decimal? @db.Decimal(15, 2)
+  currency String   @default("USD") @db.VarChar(3)
+
+  // Client portal settings
+  clientAccessEnabled Boolean @default(false)
+  clientAccessToken   String? @unique @db.VarChar(100)
+
+  coverImage String?  @db.VarChar(500)
+  createdBy  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator      User?         @relation("ProjectCreator", fields: [createdBy], references: [id])
+  budgetItems  BudgetItem[]
+  dailyReports DailyReport[]
+  tasks        Task[]
+  documents    Document[]
+  permits      Permit[]
+  photos       Photo[]
+  expenses     Expense[]
+  activityLogs ActivityLog[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("projects")
+}
+
+// ============================================================================
+// BUDGET & COSTS (Feature 1: Budget Analytics)
+// ============================================================================
+
+model BudgetItem {
+  id            String    @id @default(uuid())
+  tenantId      String
+  projectId     String
+  category      String    @db.VarChar(100)
+  description   String    @db.Text
+  estimatedCost Decimal   @db.Decimal(15, 2)
+  actualCost    Decimal   @default(0) @db.Decimal(15, 2)
+  status        String    @default("pending") @db.VarChar(50)
+  notes         String?   @db.Text
+  dueDate       DateTime? @db.Date
+  
+  // Alert thresholds
+  alertThreshold Decimal? @db.Decimal(5, 2) // Percentage (e.g., 80% = alert when 80% spent)
+  alertSent      Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([category])
+  @@map("budget_items")
+}
+
+// ============================================================================
+// EXPENSE TRACKING (Feature 8)
+// ============================================================================
+
+model Expense {
+  id           String   @id @default(uuid())
+  tenantId     String
+  projectId    String
+  budgetItemId String?
+  amount       Decimal  @db.Decimal(15, 2)
+  currency     String   @default("USD") @db.VarChar(3)
+  vendor       String?  @db.VarChar(255)
+  description  String   @db.Text
+  category     String   @db.VarChar(50)
+  receiptUrl   String?  @db.VarChar(500)
+  expenseDate  DateTime @db.Date
+  
+  // Approval workflow
+  status       String   @default("pending") @db.VarChar(50) // pending, approved, rejected
+  approvedBy   String?
+  approvedAt   DateTime?
+  
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  budgetItem BudgetItem? @relation(fields: [budgetItemId], references: [id])
+  creator    User?       @relation(fields: [createdBy], references: [id])
+
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([budgetItemId])
+  @@index([expenseDate])
+  @@map("expenses")
+}
+
+// ============================================================================
+// DAILY REPORTS (Feature 2)
+// ============================================================================
+
+model DailyReport {
+  id           String   @id @default(uuid())
+  tenantId     String
+  projectId    String
+  reportDate   DateTime @db.Date
+  weather      String?  @db.VarChar(50)
+  temperature  Int?
+  humidity     Int?
+  workSummary  String?  @db.Text
+  issues       String?  @db.Text
+  safetyNotes  String?  @db.Text
+  workersCount Int?
+  
+  // Equipment and materials
+  equipmentUsed String? @db.Text
+  materialsUsed String? @db.Text
+  
+  // Sign-off
+  supervisorSignOff Boolean   @default(false)
+  signedOffBy       String?
+  signedOffAt       DateTime?
+  
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author  User?   @relation(fields: [createdBy], references: [id])
+  photos  Photo[]
+
+  @@unique([projectId, reportDate])
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([reportDate])
+  @@map("daily_reports")
+}
+
+// ============================================================================
+// PHOTO DOCUMENTATION (Feature 5)
+// ============================================================================
+
+model Photo {
+  id           String   @id @default(uuid())
+  tenantId     String
+  projectId    String
+  reportId     String?
+  url          String   @db.VarChar(500)
+  thumbnailUrl String?  @db.VarChar(500)
+  caption      String?  @db.Text
+  category     String?  @db.VarChar(50) // progress, issue, safety, completion, before, after
+  location     String?  @db.VarChar(255) // Where in the project
+  
+  // Annotations stored as JSON
+  annotations  Json     @default("[]")
+  
+  takenAt    DateTime @default(now())
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  dailyReport DailyReport? @relation(fields: [reportId], references: [id])
+  uploader    User?        @relation(fields: [uploadedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([reportId])
+  @@index([category])
+  @@map("photos")
+}
+
+// ============================================================================
+// TASKS (Feature 10: Timeline/Gantt)
+// ============================================================================
+
+model Task {
+  id              String    @id @default(uuid())
+  tenantId        String
+  projectId       String
+  parentId        String?
+  title           String    @db.VarChar(255)
+  description     String?   @db.Text
+  status          String    @default("pending") @db.VarChar(50)
+  priority        String    @default("medium") @db.VarChar(20)
+  startDate       DateTime? @db.Date
+  dueDate         DateTime? @db.Date
+  completedAt     DateTime?
+  estimatedHours  Float?
+  actualHours     Float?
+  assignedTo      String?
+  subcontractorId String?
+  sortOrder       Int       @default(0)
+  
+  // Dependencies for Gantt (Feature 10)
+  dependsOn       String[]  @default([]) // Array of task IDs this task depends on
+  
+  // Progress tracking
+  progressPercent Int       @default(0) // 0-100
+  
+  // Color coding for timeline
+  color           String?   @db.VarChar(7) // Hex color
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent        Task?          @relation("TaskHierarchy", fields: [parentId], references: [id])
+  subtasks      Task[]         @relation("TaskHierarchy")
+  assignee      User?          @relation("TaskAssignee", fields: [assignedTo], references: [id])
+  subcontractor Subcontractor? @relation(fields: [subcontractorId], references: [id])
+
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+// ============================================================================
+// SUBCONTRACTORS (Feature 3)
+// ============================================================================
+
+model Subcontractor {
+  id              String    @id @default(uuid())
+  tenantId        String
+  companyName     String    @db.VarChar(255)
+  contactName     String?   @db.VarChar(255)
+  email           String?   @db.VarChar(255)
+  phone           String?   @db.VarChar(50)
+  address         String?   @db.Text
+  trade           String?   @db.VarChar(100)
+  licenseNumber   String?   @db.VarChar(100)
+  licenseExpiry   DateTime? @db.Date
+  insuranceNumber String?   @db.VarChar(100)
+  insuranceExpiry DateTime? @db.Date
+  
+  // Performance tracking
+  rating          Decimal?  @db.Decimal(3, 2) // 0.00 - 5.00
+  completedJobs   Int       @default(0)
+  onTimePercent   Decimal?  @db.Decimal(5, 2)
+  
+  // Documents
+  w9Url           String?   @db.VarChar(500)
+  insuranceCertUrl String?  @db.VarChar(500)
+  
+  notes    String?  @db.Text
+  isActive Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tasks  Task[]
+
+  @@index([tenantId])
+  @@index([trade])
+  @@index([isActive])
+  @@map("subcontractors")
+}
+
+// ============================================================================
+// DOCUMENTS
+// ============================================================================
+
+model Document {
+  id          String   @id @default(uuid())
+  tenantId    String
+  projectId   String?
+  folderId    String?
+  name        String   @db.VarChar(255)
+  type        String   @db.VarChar(50)
+  mimeType    String?  @db.VarChar(100)
+  sizeBytes   BigInt?
+  storagePath String?  @db.VarChar(500)
+  version     Int      @default(1)
+  tags        String[] @default([])
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project  Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent   Document?  @relation("DocumentHierarchy", fields: [folderId], references: [id])
+  children Document[] @relation("DocumentHierarchy")
+  uploader User?      @relation(fields: [createdBy], references: [id])
+
+  @@index([tenantId])
+  @@index([projectId])
+  @@map("documents")
+}
+
+// ============================================================================
+// PERMITS (Feature 4)
+// ============================================================================
+
+model Permit {
+  id            String    @id @default(uuid())
+  tenantId      String
+  projectId     String
+  permitType    String    @db.VarChar(100)
+  permitNumber  String?   @db.VarChar(100)
+  issuingAgency String?   @db.VarChar(255)
+  status        String    @default("pending") @db.VarChar(50)
+  
+  // Timeline
+  submittedAt   DateTime? @db.Date
+  reviewStarted DateTime?
+  approvedAt    DateTime? @db.Date
+  expiresAt     DateTime? @db.Date
+  
+  fees          Decimal?  @db.Decimal(10, 2)
+  notes         String?   @db.Text
+  
+  // Document references
+  applicationUrl String?   @db.VarChar(500)
+  approvalUrl    String?   @db.VarChar(500)
+  
+  // Reminders
+  reminderDays   Int       @default(30) // Days before expiry to remind
+  reminderSent   Boolean   @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("permits")
+}
+
+// ============================================================================
+// ACTIVITY TIMELINE (Feature 7)
+// ============================================================================
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  tenantId   String
+  projectId  String?
+  userId     String
+  action     String   @db.VarChar(50) // created, updated, deleted, completed, approved, rejected
+  entityType String   @db.VarChar(50) // task, budget_item, expense, daily_report, permit, etc.
+  entityId   String   @db.VarChar(100)
+  entityName String?  @db.VarChar(255) // Human readable name
+  changes    Json     @default("{}") // { field: { old: value, new: value } }
+  metadata   Json     @default("{}") // Additional context
+  ipAddress  String?  @db.VarChar(45)
+  userAgent  String?  @db.VarChar(500)
+  createdAt  DateTime @default(now())
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  user    User     @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id        String    @id @default(uuid())
+  tenantId  String
+  userId    String
+  type      String    @db.VarChar(50)
+  title     String    @db.VarChar(255)
+  message   String    @db.Text
+  link      String?   @db.VarChar(500)
+  
+  // Priority for filtering
+  priority  String    @default("normal") @db.VarChar(20) // low, normal, high, urgent
+  
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  
+  // Email delivery tracking
+  emailSent Boolean   @default(false)
+  emailSentAt DateTime?
+  
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============================================================================
+// AUTH
+// ============================================================================
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique @db.VarChar(500)
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}

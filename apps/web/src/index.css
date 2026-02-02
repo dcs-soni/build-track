@@ -1,0 +1,363 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   BUILDTRACK - ARCHITECTURAL VISUALIZATION
+   Elite Private Gallery Aesthetic
+   ============================================ */
+
+:root {
+  /* Core Palette - Obsidian & Titanium */
+  --obsidian: #0a0a0a;
+  --carbon: #111111;
+  --graphite: #1a1a1a;
+  --titanium: #2a2a2a;
+  --steel: #3a3a3a;
+  --concrete: #e1e1e1;
+  --chalk: #f5f5f5;
+  --ivory: #fafafa;
+
+  /* Accent - Burnished Gold */
+  --gold: #a68b5b;
+  --gold-muted: #8a7048;
+  --gold-glow: rgba(166, 139, 91, 0.15);
+
+  /* Secondary Accent - Slate Blue */
+  --slate: #4a5568;
+  --slate-light: #718096;
+
+  /* Typography */
+  --font-display: "Inter", -apple-system, system-ui, sans-serif;
+  --font-body: "Inter", -apple-system, system-ui, sans-serif;
+
+  /* Spacing & Radius */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+
+  /* Transitions */
+  --ease-architectural: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --duration-slow: 0.8s;
+  --duration-medium: 0.5s;
+  --duration-fast: 0.3s;
+
+  /* Glassmorphism */
+  --glass-blur: 18px;
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-bg: rgba(26, 26, 26, 0.8);
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--obsidian);
+  color: var(--concrete);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--gold);
+  color: var(--obsidian);
+}
+
+/* ============================================
+   TYPOGRAPHY - SWISS MODERNIST
+   ============================================ */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--ivory);
+}
+
+.text-display {
+  font-size: clamp(3rem, 8vw, 7rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+.text-headline {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.text-subhead {
+  font-size: 1.125rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--slate-light);
+}
+
+.text-body {
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--concrete);
+}
+
+.text-caption {
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--slate-light);
+}
+
+/* ============================================
+   GLASSMORPHISM 2.0
+   ============================================ */
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+/* ============================================
+   BUTTONS - ARCHITECTURAL
+   ============================================ */
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 32px;
+  background: transparent;
+  color: var(--ivory);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1px solid var(--steel);
+  transition: all var(--duration-slow) var(--ease-architectural);
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: var(--ivory);
+  color: var(--obsidian);
+  border-color: var(--ivory);
+}
+
+.btn-gold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 32px;
+  background: transparent;
+  color: var(--gold);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1px solid var(--gold-muted);
+  transition: all var(--duration-slow) var(--ease-architectural);
+  cursor: pointer;
+}
+
+.btn-gold:hover {
+  background: var(--gold);
+  color: var(--obsidian);
+  border-color: var(--gold);
+}
+
+/* ============================================
+   GRID SYSTEM - 12 COLUMN MODULAR
+   ============================================ */
+
+.grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+}
+
+.container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 48px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 24px;
+  }
+}
+
+/* ============================================
+   THIN LINE ICONOGRAPHY
+   ============================================ */
+
+.icon-thin {
+  stroke-width: 1px;
+  stroke: currentColor;
+  fill: none;
+}
+
+/* ============================================
+   ANIMATIONS - EASED UNVEIL
+   ============================================ */
+
+@keyframes unveil-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes unveil-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes line-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.animate-unveil {
+  opacity: 0;
+  animation: unveil-up 1s var(--ease-architectural) forwards;
+}
+
+.animate-fade {
+  opacity: 0;
+  animation: unveil-fade 1.2s var(--ease-architectural) forwards;
+}
+
+.delay-100 {
+  animation-delay: 0.1s;
+}
+.delay-200 {
+  animation-delay: 0.2s;
+}
+.delay-300 {
+  animation-delay: 0.3s;
+}
+.delay-400 {
+  animation-delay: 0.4s;
+}
+.delay-500 {
+  animation-delay: 0.5s;
+}
+.delay-600 {
+  animation-delay: 0.6s;
+}
+.delay-800 {
+  animation-delay: 0.8s;
+}
+.delay-1000 {
+  animation-delay: 1s;
+}
+
+/* ============================================
+   HORIZONTAL RULE - ARCHITECTURAL
+   ============================================ */
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--steel), transparent);
+  border: none;
+}
+
+.divider-gold {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--gold-muted),
+    transparent
+  );
+  border: none;
+}
+
+/* ============================================
+   SCROLLBAR - MINIMAL
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--obsidian);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--titanium);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--steel);
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+
+.text-gold {
+  color: var(--gold);
+}
+
+.border-gold {
+  border-color: var(--gold-muted);
+}
+
+.bg-obsidian {
+  background-color: var(--obsidian);
+}
+
+.bg-carbon {
+  background-color: var(--carbon);
+}
+
+.bg-graphite {
+  background-color: var(--graphite);
+}
