@@ -42,3 +42,10 @@ packages/database/prisma/*.db-journal
 *.tsbuildinfo
 .eslintcache
 .cache/
+
+# Docker
+.docker/
+
+# Production environment files (never commit!)
+.env.production
+.env.staging

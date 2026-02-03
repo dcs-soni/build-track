@@ -29,6 +29,7 @@ model Tenant {
   subcontractors Subcontractor[]
   invitations    Invitation[]
   activityLogs   ActivityLog[]
+  equipment      Equipment[]
 
   @@map("tenants")
 }
@@ -55,6 +56,21 @@ model User {
   createdExpenses  Expense[]
   activityLogs     ActivityLog[]
   sentInvitations  Invitation[]
+
+  // RFI Relations
+  assignedRFIs     RFI[]              @relation("RFIAssignee")
+  answeredRFIs     RFI[]              @relation("RFIAnsweredBy")
+  createdRFIs      RFI[]              @relation("RFICreator")
+  rfiResponses     RFIResponse[]
+  rfiAttachments   RFIAttachment[]
+  rfiDistributions RFIDistribution[]
+
+  // Equipment Relations
+  equipmentAssignedTo   EquipmentAssignment[] @relation("EquipmentAssignedTo")
+  equipmentAssignedBy   EquipmentAssignment[] @relation("EquipmentAssignedBy")
+  equipmentCheckedInBy  EquipmentAssignment[] @relation("EquipmentCheckedInBy")
+  equipmentMaintenance  EquipmentMaintenance[]
+  equipmentDocuments    EquipmentDocument[]
 
   @@map("users")
 }
@@ -145,6 +161,9 @@ model Project {
   photos       Photo[]
   expenses     Expense[]
   activityLogs ActivityLog[]
+  rfis         RFI[]
+  currentEquipment   Equipment[]           @relation("CurrentEquipment")
+  equipmentAssignments EquipmentAssignment[]
 
   @@index([tenantId])
   @@index([status])
@@ -453,6 +472,332 @@ model Permit {
   @@index([status])
   @@index([expiresAt])
   @@map("permits")
+}
+
+// ============================================================================
+// RFI - REQUEST FOR INFORMATION (Industry Standard)
+// ============================================================================
+
+model RFI {
+  id            String    @id @default(uuid())
+  tenantId      String
+  projectId     String
+  
+  // RFI Identification
+  rfiNumber     String    @db.VarChar(50)  // Auto-generated: PROJ-RFI-001
+  subject       String    @db.VarChar(255)
+  
+  // Question Details
+  question      String    @db.Text
+  suggestedAnswer String? @db.Text  // Contractor's proposed solution
+  
+  // Document References
+  drawingRef    String?   @db.VarChar(255)  // Drawing number/sheet reference
+  specSection   String?   @db.VarChar(100)  // Specification section reference
+  location      String?   @db.VarChar(255)  // Physical location on site
+  
+  // Workflow Status
+  status        String    @default("draft") @db.VarChar(50)
+  // Values: draft, open, under_review, answered, closed, void
+  priority      String    @default("normal") @db.VarChar(20)
+  // Values: low, normal, high, urgent
+  
+  // Assignment & Ball-in-Court
+  assignedToId  String?   // Who needs to respond
+  ballInCourt   String    @default("contractor") @db.VarChar(50)
+  // Values: contractor, architect, engineer, owner, consultant
+  
+  // Key Dates
+  dateSubmitted DateTime?
+  dateRequired  DateTime  @db.Date  // Response needed by this date
+  dateAnswered  DateTime?
+  dateClosed    DateTime?
+  
+  // Impact Assessment (Critical for construction)
+  costImpact      Boolean   @default(false)
+  scheduleImpact  Boolean   @default(false)
+  costAmount      Decimal?  @db.Decimal(15, 2)  // Estimated cost impact
+  scheduleDays    Int?      // Estimated days of delay
+  impactNotes     String?   @db.Text
+  
+  // Official Answer (final response)
+  officialAnswer  String?   @db.Text
+  answeredById    String?
+  
+  // Metadata
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo    User?         @relation("RFIAssignee", fields: [assignedToId], references: [id])
+  answeredBy    User?         @relation("RFIAnsweredBy", fields: [answeredById], references: [id])
+  creator       User          @relation("RFICreator", fields: [createdBy], references: [id])
+  responses     RFIResponse[]
+  attachments   RFIAttachment[]
+  distributions RFIDistribution[]
+
+  @@unique([projectId, rfiNumber])
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([status])
+  @@index([ballInCourt])
+  @@index([dateRequired])
+  @@index([assignedToId])
+  @@map("rfis")
+}
+
+model RFIResponse {
+  id          String    @id @default(uuid())
+  rfiId       String
+  responderId String
+  response    String    @db.Text
+  isOfficial  Boolean   @default(false)  // Official answer vs. discussion comment
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  rfi         RFI       @relation(fields: [rfiId], references: [id], onDelete: Cascade)
+  responder   User      @relation(fields: [responderId], references: [id])
+
+  @@index([rfiId])
+  @@index([responderId])
+  @@map("rfi_responses")
+}
+
+model RFIAttachment {
+  id          String    @id @default(uuid())
+  rfiId       String
+  fileName    String    @db.VarChar(255)
+  fileUrl     String    @db.VarChar(500)
+  fileType    String    @db.VarChar(100)  // MIME type
+  fileSize    Int       // Size in bytes
+  description String?   @db.VarChar(500)
+  uploadedBy  String
+  createdAt   DateTime  @default(now())
+  
+  rfi         RFI       @relation(fields: [rfiId], references: [id], onDelete: Cascade)
+  uploader    User      @relation(fields: [uploadedBy], references: [id])
+
+  @@index([rfiId])
+  @@map("rfi_attachments")
+}
+
+model RFIDistribution {
+  id         String    @id @default(uuid())
+  rfiId      String
+  userId     String
+  notifiedAt DateTime?  // When notification was sent
+  viewedAt   DateTime?  // When user viewed the RFI
+  
+  rfi        RFI       @relation(fields: [rfiId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id])
+
+  @@unique([rfiId, userId])
+  @@index([rfiId])
+  @@index([userId])
+  @@map("rfi_distributions")
+}
+
+// ============================================================================
+// EQUIPMENT/ASSET TRACKING (Enterprise)
+// ============================================================================
+
+model Equipment {
+  id            String    @id @default(uuid())
+  tenantId      String
+  
+  // Identification
+  assetTag      String    @db.VarChar(100)  // Unique asset ID/barcode
+  name          String    @db.VarChar(255)
+  description   String?   @db.Text
+  category      String    @db.VarChar(50)   // tool, vehicle, heavy_equipment, safety, other
+  subcategory   String?   @db.VarChar(100)
+  
+  // Manufacturer Details
+  manufacturer  String?   @db.VarChar(255)
+  model         String?   @db.VarChar(255)
+  serialNumber  String?   @db.VarChar(255)
+  
+  // Purchase/Financial
+  purchaseDate    DateTime? @db.Date
+  purchasePrice   Decimal?  @db.Decimal(15, 2)
+  warrantyExpiry  DateTime? @db.Date
+  depreciationRate Decimal? @db.Decimal(5, 2)  // Annual percentage
+  currentValue    Decimal?  @db.Decimal(15, 2) // Calculated value
+  
+  // Status & Location
+  status          String    @default("available") @db.VarChar(50)
+  // Values: available, checked_out, maintenance, retired, lost
+  condition       String    @default("good") @db.VarChar(50)
+  // Values: excellent, good, fair, poor, needs_repair
+  currentProjectId String?
+  storageLocation String?   @db.VarChar(255)
+  
+  // Maintenance Config
+  maintenanceIntervalDays Int?
+  lastMaintenanceDate     DateTime?
+  nextMaintenanceDate     DateTime?
+  meterReading            Decimal?  @db.Decimal(12, 2) // Hours/miles/etc
+  meterUnit               String?   @db.VarChar(20)    // hours, miles, km
+  
+  // Media
+  imageUrl      String?   @db.VarChar(500)
+  qrCodeData    String?   @db.VarChar(500)  // QR code content
+  
+  // Metadata
+  notes         String?   @db.Text
+  customFields  Json      @default("{}")  // Flexible custom attributes
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  currentProject Project? @relation("CurrentEquipment", fields: [currentProjectId], references: [id])
+  assignments   EquipmentAssignment[]
+  maintenanceRecords EquipmentMaintenance[]
+  documents     EquipmentDocument[]
+
+  @@unique([tenantId, assetTag])
+  @@index([tenantId])
+  @@index([category])
+  @@index([status])
+  @@index([currentProjectId])
+  @@index([nextMaintenanceDate])
+  @@map("equipment")
+}
+
+model EquipmentAssignment {
+  id            String    @id @default(uuid())
+  tenantId      String
+  equipmentId   String
+  projectId     String?
+  
+  // Assignment Details
+  assignedToId  String    // User who has it
+  assignedById  String    // User who assigned it
+  purpose       String?   @db.VarChar(500)
+  
+  // Check-out
+  checkedOutAt  DateTime  @default(now())
+  expectedReturnAt DateTime?
+  
+  // Check-in
+  checkedInAt   DateTime?
+  checkedInById String?
+  
+  // Condition Assessment
+  conditionOut  String    @db.VarChar(50)  // excellent, good, fair, poor
+  conditionIn   String?   @db.VarChar(50)
+  meterOut      Decimal?  @db.Decimal(12, 2)  // Meter reading at checkout
+  meterIn       Decimal?  @db.Decimal(12, 2)  // Meter reading at checkin
+  notesOut      String?   @db.Text
+  notesIn       String?   @db.Text
+  
+  // Digital Signatures/Photos (URLs)
+  signatureOutUrl String? @db.VarChar(500)
+  signatureInUrl  String? @db.VarChar(500)
+  photoOutUrl     String? @db.VarChar(500)
+  photoInUrl      String? @db.VarChar(500)
+  
+  createdAt     DateTime  @default(now())
+
+  equipment     Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  project       Project?  @relation(fields: [projectId], references: [id])
+  assignedTo    User      @relation("EquipmentAssignedTo", fields: [assignedToId], references: [id])
+  assignedBy    User      @relation("EquipmentAssignedBy", fields: [assignedById], references: [id])
+  checkedInBy   User?     @relation("EquipmentCheckedInBy", fields: [checkedInById], references: [id])
+
+  @@index([tenantId])
+  @@index([equipmentId])
+  @@index([projectId])
+  @@index([assignedToId])
+  @@index([checkedOutAt])
+  @@index([checkedInAt])
+  @@map("equipment_assignments")
+}
+
+model EquipmentMaintenance {
+  id            String    @id @default(uuid())
+  tenantId      String
+  equipmentId   String
+  
+  // Maintenance Type
+  type          String    @db.VarChar(50)
+  // Values: scheduled, preventive, repair, inspection, calibration, emergency
+  title         String    @db.VarChar(255)
+  description   String?   @db.Text
+  priority      String    @default("normal") @db.VarChar(20)
+  
+  // Scheduling
+  scheduledDate DateTime  @db.Date
+  dueDate       DateTime? @db.Date  // For window-based scheduling
+  completedDate DateTime?
+  status        String    @default("scheduled") @db.VarChar(50)
+  // Values: scheduled, in_progress, completed, cancelled, overdue
+  
+  // Work Details
+  performedById String?   // Internal technician
+  vendor        String?   @db.VarChar(255)  // External service provider
+  workOrderNumber String? @db.VarChar(100)
+  
+  // Cost Tracking
+  laborHours    Decimal?  @db.Decimal(5, 2)
+  partsCost     Decimal?  @db.Decimal(10, 2)
+  laborCost     Decimal?  @db.Decimal(10, 2)
+  otherCost     Decimal?  @db.Decimal(10, 2)
+  totalCost     Decimal?  @db.Decimal(10, 2)
+  
+  // Meter Reading
+  meterReading  Decimal?  @db.Decimal(12, 2)
+  
+  // Documentation
+  findings      String?   @db.Text
+  actionsTaken  String?   @db.Text
+  partsUsed     Json      @default("[]")  // Array of {name, quantity, cost}
+  receiptUrl    String?   @db.VarChar(500)
+  
+  // Follow-up
+  followUpRequired Boolean @default(false)
+  followUpNotes   String?  @db.Text
+  nextScheduledDate DateTime?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  equipment     Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  performedBy   User?     @relation(fields: [performedById], references: [id])
+
+  @@index([tenantId])
+  @@index([equipmentId])
+  @@index([scheduledDate])
+  @@index([status])
+  @@index([type])
+  @@map("equipment_maintenance")
+}
+
+model EquipmentDocument {
+  id            String    @id @default(uuid())
+  equipmentId   String
+  name          String    @db.VarChar(255)
+  type          String    @db.VarChar(50)
+  // Values: manual, warranty, certificate, inspection_report, invoice, insurance, license
+  fileUrl       String    @db.VarChar(500)
+  fileSize      Int?      // Size in bytes
+  mimeType      String?   @db.VarChar(100)
+  expiresAt     DateTime? // For certificates, warranties, etc.
+  reminderDays  Int?      // Days before expiry to remind
+  uploadedById  String
+  createdAt     DateTime  @default(now())
+
+  equipment     Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  uploadedBy    User      @relation(fields: [uploadedById], references: [id])
+
+  @@index([equipmentId])
+  @@index([type])
+  @@index([expiresAt])
+  @@map("equipment_documents")
 }
 
 // ============================================================================

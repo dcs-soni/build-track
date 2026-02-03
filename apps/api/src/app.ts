@@ -19,6 +19,8 @@ import { invitationRoutes } from "./routes/invitation.routes.js";
 import { activityRoutes } from "./routes/activity.routes.js";
 import { clientPortalRoutes } from "./routes/client-portal.routes.js";
 import { timelineRoutes } from "./routes/timeline.routes.js";
+import { rfiRoutes } from "./routes/rfi.routes.js";
+import { equipmentRoutes } from "./routes/equipment.routes.js";
 import { tenantPlugin } from "./plugins/tenant.plugin.js";
 import { errorHandler } from "./plugins/error.plugin.js";
 
@@ -97,6 +99,12 @@ export async function buildApp() {
 
   // Feature 10: Project Timeline/Gantt
   await app.register(timelineRoutes, { prefix: "/api/v1/timeline" });
+
+  // Feature 11: RFI (Request for Information)
+  await app.register(rfiRoutes, { prefix: "/api/v1/rfis" });
+
+  // Feature 12: Equipment/Asset Tracking
+  await app.register(equipmentRoutes, { prefix: "/api/v1/equipment" });
 
   // Graceful shutdown
   app.addHook("onClose", async () => {

@@ -13,7 +13,14 @@
     "db:push": "turbo db:push",
     "db:migrate": "turbo db:migrate",
     "db:studio": "pnpm --filter @buildtrack/database db:studio",
-    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "docker:dev": "docker compose up -d",
+    "docker:dev:build": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:prod": "docker compose -f docker-compose.prod.yml up -d",
+    "docker:build:api": "docker build -f apps/api/Dockerfile -t buildtrack-api .",
+    "docker:build:web": "docker build -f apps/web/Dockerfile -t buildtrack-web ."
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

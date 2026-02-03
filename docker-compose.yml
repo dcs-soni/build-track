@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: buildtrack-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: buildtrack
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d buildtrack"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - buildtrack-network
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: builder
+    container_name: buildtrack-api
+    restart: unless-stopped
+    command: pnpm --filter @buildtrack/api dev
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/buildtrack?schema=public
+      JWT_SECRET: development-secret-change-in-production
+      JWT_EXPIRES_IN: 15m
+      REFRESH_TOKEN_EXPIRES_IN: 7d
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./apps/api/src:/app/apps/api/src:ro
+      - ./packages:/app/packages:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - buildtrack-network
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: builder
+    container_name: buildtrack-web
+    restart: unless-stopped
+    command: pnpm --filter @buildtrack/web dev --host
+    environment:
+      VITE_API_URL: http://localhost:4000
+    ports:
+      - "3000:5173"
+    volumes:
+      - ./apps/web/src:/app/apps/web/src:ro
+      - ./packages:/app/packages:ro
+    depends_on:
+      - api
+    networks:
+      - buildtrack-network
+
+volumes:
+  postgres_data:
+    name: buildtrack-postgres-data
+
+networks:
+  buildtrack-network:
+    name: buildtrack-network
+    driver: bridge
