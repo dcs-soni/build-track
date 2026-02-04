@@ -31,6 +31,7 @@ model Tenant {
   activityLogs   ActivityLog[]
   equipment      Equipment[]
   notificationPreferences NotificationPreference[]
+  notifications   Notification[]
 
   @@map("tenants")
 }
@@ -171,6 +172,7 @@ model Project {
   equipmentAssignments EquipmentAssignment[]
   updates      ProjectUpdate[]
 
+  @@unique([id, tenantId])
   @@index([tenantId])
   @@index([status])
   @@map("projects")
@@ -898,6 +900,7 @@ model Notification {
   createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([userId])
