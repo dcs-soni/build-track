@@ -12,9 +12,7 @@ const listQuerySchema = z.object({
 const preferenceSchema = z.object({
   inAppEnabled: z.boolean().optional(),
   emailEnabled: z.boolean().optional(),
-  digestFrequency: z
-    .enum(["immediate", "daily", "weekly", "none"])
-    .optional(),
+  digestFrequency: z.enum(["immediate", "daily", "weekly", "none"]).optional(),
   notifyTaskAssigned: z.boolean().optional(),
   notifyRfiAssigned: z.boolean().optional(),
   notifyRfiResponse: z.boolean().optional(),
@@ -111,6 +109,18 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
+      // Check if notification exists but is already read (idempotent success)
+      const existing = await fastify.prisma.notification.findFirst({
+        where: { id, tenantId, userId },
+        select: { id: true, isRead: true },
+      });
+
+      if (existing && existing.isRead) {
+        // Already read - return idempotent success
+        return reply.send({ success: true });
+      }
+
+      // Notification doesn't exist at all
       return reply.status(404).send({
         success: false,
         error: { code: "NOT_FOUND", message: "Notification not found" },

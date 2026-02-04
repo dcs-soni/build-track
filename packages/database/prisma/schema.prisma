@@ -72,6 +72,10 @@ model User {
   equipmentMaintenance  EquipmentMaintenance[]
   equipmentDocuments    EquipmentDocument[]
 
+  // Project Updates & Notification Preferences
+  projectUpdates           ProjectUpdate[]
+  notificationPreferences  NotificationPreference[]
+
   @@map("users")
 }
 

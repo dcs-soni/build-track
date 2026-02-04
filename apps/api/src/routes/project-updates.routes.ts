@@ -96,7 +96,7 @@ export const projectUpdateRoutes: FastifyPluginAsync = async (fastify) => {
 
     const project = await fastify.prisma.project.findFirst({
       where: { id: projectId, tenantId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, createdBy: true },
     });
     if (!project) {
       return reply.status(404).send({
@@ -119,21 +119,36 @@ export const projectUpdateRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
+    // Gather notification recipients: tenant members with allowed roles
     const members = await fastify.prisma.tenantMembership.findMany({
       where: { tenantId, role: { in: Array.from(allowedRoles) } },
       select: { userId: true },
     });
 
-    await notifyUsers(fastify.prisma, {
-      tenantId,
-      actorId: userId,
-      userIds: members.map((m) => m.userId),
-      type: "project_update",
-      title: `Project update: ${project.name}`,
-      message: body.title,
-      link: `/projects/${projectId}`,
-      preferenceKey: "notifyProjectUpdates",
-    });
+    // Build recipient list, explicitly filtering out the actor (author)
+    // Also include project creator if they exist
+    const recipientUserIds = new Set(
+      members.map((m) => m.userId).filter((uid) => uid !== userId),
+    );
+
+    // Include project creator if different from actor
+    if (project.createdBy && project.createdBy !== userId) {
+      recipientUserIds.add(project.createdBy);
+    }
+
+    // Only notify if there are recipients other than the actor
+    if (recipientUserIds.size > 0) {
+      await notifyUsers(fastify.prisma, {
+        tenantId,
+        actorId: userId,
+        userIds: Array.from(recipientUserIds),
+        type: "project_update",
+        title: `Project update: ${project.name}`,
+        message: body.title,
+        link: `/projects/${projectId}`,
+        preferenceKey: "notifyProjectUpdates",
+      });
+    }
 
     return reply.status(201).send({ success: true, data: update });
   });

@@ -129,8 +129,17 @@ export function NotificationsPage() {
                     </p>
                   </div>
                   <button
-                    onClick={() => markReadMutation.mutate(notification.id)}
-                    className="text-xs text-gray-500 hover:text-gray-900"
+                    onClick={() => {
+                      if (!notification.isRead) {
+                        markReadMutation.mutate(notification.id);
+                      }
+                    }}
+                    disabled={notification.isRead}
+                    className={`text-xs ${
+                      notification.isRead
+                        ? "text-gray-400 cursor-default"
+                        : "text-gray-500 hover:text-gray-900 cursor-pointer"
+                    }`}
                   >
                     {notification.isRead ? "Read" : "Mark read"}
                   </button>
