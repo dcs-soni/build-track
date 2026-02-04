@@ -90,7 +90,12 @@ export function NotificationsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-3">
-          {notificationsQuery.isLoading ? (
+          {notificationsQuery.isError ? (
+            <div className="text-center py-12 bg-red-50 rounded-xl border border-red-200 text-red-600">
+              <p className="font-medium">Failed to load notifications</p>
+              <p className="text-sm mt-1">Please try refreshing the page.</p>
+            </div>
+          ) : notificationsQuery.isLoading ? (
             <div className="text-center py-12 text-gray-500">Loading...</div>
           ) : notifications.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl border border-gray-200 text-gray-500">
@@ -163,7 +168,12 @@ export function NotificationsPage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             Notification Settings
           </h2>
-          {!preferences ? (
+          {preferencesQuery.isError ? (
+            <div className="text-sm text-red-600 bg-red-50 rounded-lg p-3">
+              <p className="font-medium">Failed to load preferences</p>
+              <p className="text-xs mt-1">Please try refreshing the page.</p>
+            </div>
+          ) : !preferences ? (
             <div className="text-sm text-gray-500">Loading preferences...</div>
           ) : (
             <div className="space-y-3 text-sm">

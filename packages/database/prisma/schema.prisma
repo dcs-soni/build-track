@@ -30,6 +30,7 @@ model Tenant {
   invitations    Invitation[]
   activityLogs   ActivityLog[]
   equipment      Equipment[]
+  notificationPreferences NotificationPreference[]
 
   @@map("tenants")
 }
@@ -190,11 +191,12 @@ model ProjectUpdate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId, tenantId], references: [id, tenantId], onDelete: Cascade)
   author  User    @relation(fields: [createdBy], references: [id])
 
   @@index([tenantId])
   @@index([projectId])
+  @@index([projectId, tenantId])
   @@index([audience])
   @@map("project_updates")
 }
@@ -227,6 +229,7 @@ model BudgetItem {
 
   @@index([tenantId])
   @@index([projectId])
+  @@index([projectId, tenantId])
   @@index([category])
   @@map("budget_items")
 }
@@ -263,6 +266,7 @@ model Expense {
 
   @@index([tenantId])
   @@index([projectId])
+  @@index([projectId, tenantId])
   @@index([budgetItemId])
   @@index([expenseDate])
   @@map("expenses")
@@ -298,13 +302,14 @@ model DailyReport {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId, tenantId], references: [id, tenantId], onDelete: Cascade)
   author  User?   @relation(fields: [createdBy], references: [id])
   photos  Photo[]
 
   @@unique([projectId, reportDate])
   @@index([tenantId])
   @@index([projectId])
+  @@index([projectId, tenantId])
   @@index([reportDate])
   @@map("daily_reports")
 }
@@ -337,6 +342,7 @@ model Photo {
 
   @@index([tenantId])
   @@index([projectId])
+  @@index([projectId, tenantId])
   @@index([reportId])
   @@index([category])
   @@map("photos")
@@ -384,6 +390,7 @@ model Task {
 
   @@index([tenantId])
   @@index([projectId])
+  @@index([projectId, tenantId])
   @@index([status])
   @@index([dueDate])
   @@map("tasks")
@@ -458,6 +465,7 @@ model Document {
 
   @@index([tenantId])
   @@index([projectId])
+  @@index([projectId, tenantId])
   @@map("documents")
 }
 
@@ -494,10 +502,11 @@ model Permit {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId, tenantId], references: [id, tenantId], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([projectId])
+  @@index([projectId, tenantId])
   @@index([status])
   @@index([expiresAt])
   @@map("permits")
@@ -570,6 +579,7 @@ model RFI {
   @@unique([projectId, rfiNumber])
   @@index([tenantId])
   @@index([projectId])
+  @@index([projectId, tenantId])
   @@index([status])
   @@index([ballInCourt])
   @@index([dateRequired])
@@ -741,6 +751,7 @@ model EquipmentAssignment {
   @@index([tenantId])
   @@index([equipmentId])
   @@index([projectId])
+  @@index([projectId, tenantId])
   @@index([assignedToId])
   @@index([checkedOutAt])
   @@index([checkedInAt])
@@ -854,6 +865,7 @@ model ActivityLog {
 
   @@index([tenantId])
   @@index([projectId])
+  @@index([projectId, tenantId])
   @@index([userId])
   @@index([entityType, entityId])
   @@index([createdAt])
@@ -912,6 +924,7 @@ model NotificationPreference {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, userId])
   @@index([tenantId])
