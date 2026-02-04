@@ -74,3 +74,23 @@ export const tasksApi = {
   delete: (id: string) => api.delete(`/tasks/${id}`),
   complete: (id: string) => api.post(`/tasks/${id}/complete`),
 };
+
+// Notifications API
+export const notificationsApi = {
+  list: (params?: Record<string, string>) =>
+    api.get("/notifications", { params }),
+  unreadCount: () => api.get("/notifications/unread-count"),
+  markRead: (id: string) => api.post(`/notifications/${id}/read`),
+  markAllRead: () => api.post("/notifications/read-all"),
+  preferences: () => api.get("/notifications/preferences"),
+  updatePreferences: (data: Record<string, unknown>) =>
+    api.put("/notifications/preferences", data),
+};
+
+// Project Updates API
+export const projectUpdatesApi = {
+  list: (projectId: string, params?: Record<string, string>) =>
+    api.get(`/projects/${projectId}/updates`, { params }),
+  create: (projectId: string, data: Record<string, unknown>) =>
+    api.post(`/projects/${projectId}/updates`, data),
+};

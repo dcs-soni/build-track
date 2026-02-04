@@ -16,6 +16,7 @@ import { PhotoGalleryPage } from "@/pages/PhotoGalleryPage";
 import { ActivityTimelinePage } from "@/pages/ActivityTimelinePage";
 import { TeamSettingsPage } from "@/pages/TeamSettingsPage";
 import { ProjectTimelinePage } from "@/pages/ProjectTimelinePage";
+import { NotificationsPage } from "@/pages/NotificationsPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -84,6 +85,9 @@ export default function App() {
           path="/projects/:projectId/activity"
           element={<ActivityTimelinePage />}
         />
+
+        {/* Communication: Notifications */}
+        <Route path="/notifications" element={<NotificationsPage />} />
 
         {/* Feature 6: Team Invitations */}
         <Route path="/settings/team" element={<TeamSettingsPage />} />
