@@ -210,6 +210,58 @@ export interface Permit {
   updatedAt: Date;
 }
 
+// Communication Types
+export type NotificationPriority = "low" | "normal" | "high" | "urgent";
+
+export interface Notification {
+  id: string;
+  tenantId: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  link?: string | null;
+  priority: NotificationPriority;
+  isRead: boolean;
+  readAt?: Date | null;
+  createdAt: Date;
+}
+
+export type NotificationDigestFrequency =
+  | "immediate"
+  | "daily"
+  | "weekly"
+  | "none";
+
+export interface NotificationPreference {
+  id: string;
+  tenantId: string;
+  userId: string;
+  inAppEnabled: boolean;
+  emailEnabled: boolean;
+  digestFrequency: NotificationDigestFrequency;
+  notifyTaskAssigned: boolean;
+  notifyRfiAssigned: boolean;
+  notifyRfiResponse: boolean;
+  notifyProjectUpdates: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type ProjectUpdateAudience = "internal" | "client";
+
+export interface ProjectUpdate {
+  id: string;
+  tenantId: string;
+  projectId: string;
+  title: string;
+  body: string;
+  audience: ProjectUpdateAudience;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // API Response Types
 export interface ApiResponse<T> {
   success: boolean;

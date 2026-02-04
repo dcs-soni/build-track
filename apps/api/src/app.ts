@@ -21,6 +21,8 @@ import { clientPortalRoutes } from "./routes/client-portal.routes.js";
 import { timelineRoutes } from "./routes/timeline.routes.js";
 import { rfiRoutes } from "./routes/rfi.routes.js";
 import { equipmentRoutes } from "./routes/equipment.routes.js";
+import { notificationRoutes } from "./routes/notification.routes.js";
+import { projectUpdateRoutes } from "./routes/project-updates.routes.js";
 import { tenantPlugin } from "./plugins/tenant.plugin.js";
 import { errorHandler } from "./plugins/error.plugin.js";
 
@@ -105,6 +107,10 @@ export async function buildApp() {
 
   // Feature 12: Equipment/Asset Tracking
   await app.register(equipmentRoutes, { prefix: "/api/v1/equipment" });
+
+  // Feature 13: Notifications & Communication
+  await app.register(notificationRoutes, { prefix: "/api/v1/notifications" });
+  await app.register(projectUpdateRoutes, { prefix: "/api/v1" });
 
   // Graceful shutdown
   app.addHook("onClose", async () => {

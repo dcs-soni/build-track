@@ -12,6 +12,7 @@
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { notifyUsers } from "../utils/notifications.js";
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -293,6 +294,23 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
+    const notifyIds = [
+      rfi.assignedToId,
+      ...(distributionUserIds || []),
+    ].filter(Boolean) as string[];
+
+    await notifyUsers(fastify.prisma, {
+      tenantId,
+      actorId: userId,
+      userIds: notifyIds,
+      type: "rfi_assigned",
+      title: `RFI-${rfiNumber}: ${body.subject}`,
+      message: "New RFI requires your attention.",
+      link: `/projects/${body.projectId}`,
+      priority: rfi.priority as "low" | "normal" | "high" | "urgent",
+      preferenceKey: "notifyRfiAssigned",
+    });
+
     return reply.status(201).send({ success: true, data: rfi });
   });
 
@@ -492,6 +510,22 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
         entityId: id,
         entityName: `RFI-${rfi.rfiNumber}: ${rfi.subject}`,
       },
+    });
+
+    await notifyUsers(fastify.prisma, {
+      tenantId: tenantId!,
+      actorId: userId!,
+      userIds: [rfi.createdBy, rfi.assignedToId].filter(
+        Boolean,
+      ) as string[],
+      type: "rfi_response",
+      title: `RFI-${rfi.rfiNumber}: ${rfi.subject}`,
+      message: body.isOfficial
+        ? "Official response posted."
+        : "New comment added.",
+      link: `/projects/${rfi.projectId}`,
+      priority: rfi.priority as "low" | "normal" | "high" | "urgent",
+      preferenceKey: "notifyRfiResponse",
     });
 
     return reply.status(201).send({ success: true, data: response });

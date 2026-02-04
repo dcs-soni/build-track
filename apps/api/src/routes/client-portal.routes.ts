@@ -268,6 +268,47 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send({ success: true, data: tasks });
   });
 
+  // Get project updates (client view)
+  fastify.get("/view/:token/updates", async (request, reply) => {
+    const { token } = request.params as { token: string };
+    const { limit = "20" } = request.query as Record<string, string>;
+
+    const project = await fastify.prisma.project.findFirst({
+      where: { clientAccessToken: token, clientAccessEnabled: true },
+      select: { id: true, tenantId: true },
+    });
+
+    if (!project) {
+      return reply
+        .status(404)
+        .send({
+          success: false,
+          error: { code: "INVALID_TOKEN", message: "Invalid access link" },
+        });
+    }
+
+    const parsedLimit = Math.min(Math.max(parseInt(limit), 1), 50);
+
+    const updates = await fastify.prisma.projectUpdate.findMany({
+      where: {
+        projectId: project.id,
+        tenantId: project.tenantId,
+        audience: "client",
+      },
+      orderBy: { createdAt: "desc" },
+      take: parsedLimit,
+      select: {
+        id: true,
+        title: true,
+        body: true,
+        createdAt: true,
+        author: { select: { name: true } },
+      },
+    });
+
+    return reply.send({ success: true, data: updates });
+  });
+
   // Get budget summary (client view - optional, configurable)
   fastify.get("/view/:token/budget", async (request, reply) => {
     const { token } = request.params as { token: string };

@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { notifyUsers } from "../utils/notifications.js";
 
 const createTaskSchema = z.object({
   projectId: z.string().uuid(),
@@ -41,6 +42,7 @@ export const taskRoutes: FastifyPluginAsync = async (fastify) => {
   // Create task
   fastify.post("/", async (request, reply) => {
     const tenantId = request.tenantId;
+    const userId = request.userId;
     if (!tenantId) {
       return reply.status(400).send({
         success: false,
@@ -71,6 +73,19 @@ export const taskRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
+    if (task.assignedTo) {
+      await notifyUsers(fastify.prisma, {
+        tenantId,
+        actorId: userId,
+        userIds: [task.assignedTo],
+        type: "task_assigned",
+        title: `Task assigned: ${task.title}`,
+        message: `You were assigned to "${task.title}".`,
+        link: `/projects/${task.projectId}`,
+        preferenceKey: "notifyTaskAssigned",
+      });
+    }
+
     return reply.status(201).send({ success: true, data: task });
   });
 
@@ -78,8 +93,27 @@ export const taskRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.patch("/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     const tenantId = request.tenantId;
+    const userId = request.userId;
+
+    if (!tenantId) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: "NO_TENANT", message: "Tenant context required" },
+      });
+    }
 
     const body = updateTaskSchema.parse(request.body);
+
+    const existing = await fastify.prisma.task.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!existing) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Task not found" },
+      });
+    }
 
     // Build update data
     const updateData: Record<string, unknown> = { ...body };
@@ -87,21 +121,23 @@ export const taskRoutes: FastifyPluginAsync = async (fastify) => {
     if (body.dueDate) updateData.dueDate = new Date(body.dueDate);
     if (body.status === "completed") updateData.completedAt = new Date();
 
-    const result = await fastify.prisma.task.updateMany({
-      where: { id, tenantId },
+    const task = await fastify.prisma.task.update({
+      where: { id },
       data: updateData,
     });
 
-    if (result.count === 0) {
-      return reply.status(404).send({
-        success: false,
-        error: { code: "NOT_FOUND", message: "Task not found" },
+    if (body.assignedTo && body.assignedTo !== existing.assignedTo) {
+      await notifyUsers(fastify.prisma, {
+        tenantId: tenantId!,
+        actorId: userId,
+        userIds: [body.assignedTo],
+        type: "task_assigned",
+        title: `Task assigned: ${task.title}`,
+        message: `You were assigned to "${task.title}".`,
+        link: `/projects/${task.projectId}`,
+        preferenceKey: "notifyTaskAssigned",
       });
     }
-
-    const task = await fastify.prisma.task.findFirst({
-      where: { id, tenantId },
-    });
     return reply.send({ success: true, data: task });
   });
 

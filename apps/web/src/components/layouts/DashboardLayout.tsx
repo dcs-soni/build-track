@@ -13,6 +13,8 @@ import {
   Briefcase,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
+import { useQuery } from "@tanstack/react-query";
+import { notificationsApi } from "@/lib/api";
 
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Overview" },
@@ -21,6 +23,7 @@ const navItems = [
   { to: "/subcontractors", icon: Briefcase, label: "Contractors" },
   { to: "/daily-reports", icon: FileText, label: "Reports" },
   { to: "/activity", icon: Clock, label: "Activity" },
+  { to: "/notifications", icon: Bell, label: "Notifications" },
 ];
 
 const secondaryNavItems = [
@@ -31,6 +34,12 @@ const secondaryNavItems = [
 export function DashboardLayout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { data: unreadData } = useQuery({
+    queryKey: ["notifications-count"],
+    queryFn: () => notificationsApi.unreadCount(),
+    refetchInterval: 60000,
+  });
+  const unreadCount = unreadData?.data?.data?.count ?? 0;
 
   const handleLogout = () => {
     logout();
@@ -148,10 +157,17 @@ export function DashboardLayout() {
 
           {/* Right side actions */}
           <div className="flex items-center gap-6">
-            <button className="relative p-2 text-[#4A5568] hover:text-white transition-colors">
+            <NavLink
+              to="/notifications"
+              className="relative p-2 text-[#4A5568] hover:text-white transition-colors"
+            >
               <Bell className="h-5 w-5" strokeWidth={1.5} />
-              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-[#A68B5B] rounded-full" />
-            </button>
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-[#A68B5B] text-[10px] text-[#0A0A0A] flex items-center justify-center">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </NavLink>
 
             <div className="h-6 w-px bg-[#1A1A1A]" />
 
