@@ -1,5 +1,10 @@
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
-import crypto from "crypto";
+import crypto, { createHash } from "crypto";
+
+/** Hash a token with SHA-256 for storage */
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
   // Auth hook for admin routes
@@ -7,12 +12,10 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       await request.jwtVerify();
     } catch {
-      return reply
-        .status(401)
-        .send({
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Authentication required" },
-        });
+      return reply.status(401).send({
+        success: false,
+        error: { code: "UNAUTHORIZED", message: "Authentication required" },
+      });
     }
   };
 
@@ -28,20 +31,28 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
         where: { id: projectId, tenantId },
       });
       if (!project) {
-        return reply
-          .status(404)
-          .send({
-            success: false,
-            error: { code: "NOT_FOUND", message: "Project not found" },
-          });
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: "Project not found" },
+        });
       }
 
       const accessToken = crypto.randomBytes(32).toString("hex");
 
-      await fastify.prisma.project.update({
-        where: { id: projectId },
-        data: { clientAccessEnabled: true, clientAccessToken: accessToken },
+      const result = await fastify.prisma.project.updateMany({
+        where: { id: projectId, tenantId },
+        data: {
+          clientAccessEnabled: true,
+          clientAccessToken: hashToken(accessToken),
+        },
       });
+
+      if (result.count === 0) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: "Project not found" },
+        });
+      }
 
       const portalUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/client/${accessToken}`;
 
@@ -78,7 +89,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
 
       await fastify.prisma.project.updateMany({
         where: { id: projectId, tenantId, clientAccessEnabled: true },
-        data: { clientAccessToken: newToken },
+        data: { clientAccessToken: hashToken(newToken) },
       });
 
       const portalUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/client/${newToken}`;
@@ -99,7 +110,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     const { token } = request.params as { token: string };
 
     const project = await fastify.prisma.project.findFirst({
-      where: { clientAccessToken: token, clientAccessEnabled: true },
+      where: { clientAccessToken: hashToken(token), clientAccessEnabled: true },
       select: {
         id: true,
         name: true,
@@ -115,15 +126,13 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: {
-            code: "INVALID_TOKEN",
-            message: "Invalid or expired access link",
-          },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "INVALID_TOKEN",
+          message: "Invalid or expired access link",
+        },
+      });
     }
 
     return reply.send({ success: true, data: project });
@@ -134,7 +143,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     const { token } = request.params as { token: string };
 
     const project = await fastify.prisma.project.findFirst({
-      where: { clientAccessToken: token, clientAccessEnabled: true },
+      where: { clientAccessToken: hashToken(token), clientAccessEnabled: true },
       include: {
         tasks: {
           select: {
@@ -149,12 +158,10 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "INVALID_TOKEN", message: "Invalid access link" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "INVALID_TOKEN", message: "Invalid access link" },
+      });
     }
 
     const tasks = project.tasks;
@@ -196,27 +203,38 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
   // Get project photos (client view - limited)
   fastify.get("/view/:token/photos", async (request, reply) => {
     const { token } = request.params as { token: string };
-    const { category, limit = "20" } = request.query as Record<string, string>;
+    const { category, limit: rawLimit = "20" } = request.query as Record<
+      string,
+      string
+    >;
+
+    const parsedLimit = parseInt(rawLimit, 10);
+    const safeLimit = Math.min(
+      Number.isNaN(parsedLimit) || parsedLimit <= 0 ? 20 : parsedLimit,
+      100,
+    );
 
     const project = await fastify.prisma.project.findFirst({
-      where: { clientAccessToken: token, clientAccessEnabled: true },
+      where: { clientAccessToken: hashToken(token), clientAccessEnabled: true },
       select: { id: true },
     });
 
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "INVALID_TOKEN", message: "Invalid access link" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "INVALID_TOKEN", message: "Invalid access link" },
+      });
     }
+
+    const ALLOWED_CATEGORIES = ["progress", "completion"];
+    const safeCategory =
+      category && ALLOWED_CATEGORIES.includes(category) ? category : undefined;
 
     const photos = await fastify.prisma.photo.findMany({
       where: {
         projectId: project.id,
         // Only show progress and completion photos to clients
-        category: category ? category : { in: ["progress", "completion"] },
+        category: safeCategory ?? { in: ALLOWED_CATEGORIES },
       },
       select: {
         id: true,
@@ -227,7 +245,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
         takenAt: true,
       },
       orderBy: { takenAt: "desc" },
-      take: Math.min(parseInt(limit), 100),
+      take: safeLimit,
     });
 
     return reply.send({ success: true, data: photos });
@@ -238,17 +256,15 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     const { token } = request.params as { token: string };
 
     const project = await fastify.prisma.project.findFirst({
-      where: { clientAccessToken: token, clientAccessEnabled: true },
+      where: { clientAccessToken: hashToken(token), clientAccessEnabled: true },
       select: { id: true },
     });
 
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "INVALID_TOKEN", message: "Invalid access link" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "INVALID_TOKEN", message: "Invalid access link" },
+      });
     }
 
     const tasks = await fastify.prisma.task.findMany({
@@ -274,17 +290,15 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     const { limit = "20" } = request.query as Record<string, string>;
 
     const project = await fastify.prisma.project.findFirst({
-      where: { clientAccessToken: token, clientAccessEnabled: true },
+      where: { clientAccessToken: hashToken(token), clientAccessEnabled: true },
       select: { id: true, tenantId: true },
     });
 
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "INVALID_TOKEN", message: "Invalid access link" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "INVALID_TOKEN", message: "Invalid access link" },
+      });
     }
 
     const parsedLimit = Math.min(Math.max(parseInt(limit), 1), 50);
@@ -314,17 +328,15 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     const { token } = request.params as { token: string };
 
     const project = await fastify.prisma.project.findFirst({
-      where: { clientAccessToken: token, clientAccessEnabled: true },
+      where: { clientAccessToken: hashToken(token), clientAccessEnabled: true },
       select: { id: true, budget: true },
     });
 
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "INVALID_TOKEN", message: "Invalid access link" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "INVALID_TOKEN", message: "Invalid access link" },
+      });
     }
 
     // Only show high-level budget info, not detailed breakdown
@@ -334,8 +346,9 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     const totalBudget =
-      Number(project.budget) ||
-      budgetItems.reduce((sum, i) => sum + Number(i.estimatedCost), 0);
+      project.budget != null
+        ? Number(project.budget)
+        : budgetItems.reduce((sum, i) => sum + Number(i.estimatedCost), 0);
     const totalSpent = budgetItems.reduce(
       (sum, i) => sum + Number(i.actualCost),
       0,

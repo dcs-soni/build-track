@@ -151,7 +151,6 @@ const updateMaintenanceSchema = createMaintenanceSchema
 // =============================================================================
 
 export const equipmentRoutes: FastifyPluginAsync = async (fastify) => {
-
   // ---------------------------------------------------------------------------
   // LIST ALL EQUIPMENT
   // ---------------------------------------------------------------------------
@@ -704,9 +703,9 @@ export const equipmentRoutes: FastifyPluginAsync = async (fastify) => {
       body.otherCost !== undefined
     ) {
       updateData.totalCost =
-        (body.partsCost || maintenance.partsCost?.toNumber() || 0) +
-        (body.laborCost || maintenance.laborCost?.toNumber() || 0) +
-        (body.otherCost || maintenance.otherCost?.toNumber() || 0);
+        (body.partsCost ?? maintenance.partsCost?.toNumber() ?? 0) +
+        (body.laborCost ?? maintenance.laborCost?.toNumber() ?? 0) +
+        (body.otherCost ?? maintenance.otherCost?.toNumber() ?? 0);
     }
 
     const updated = await fastify.prisma.equipmentMaintenance.update({

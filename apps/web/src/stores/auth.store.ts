@@ -24,6 +24,16 @@ interface AuthState {
   logout: () => void;
 }
 
+/** Decode JWT payload and check if it's expired */
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return !payload.exp || payload.exp * 1000 < Date.now();
+  } catch {
+    return true;
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -54,13 +64,21 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "buildtrack-auth",
+      // Only persist non-sensitive data — tokens in memory, not localStorage.
+      // accessToken is short-lived and needed for SPA API calls.
+      // refreshToken and user PII are NOT persisted.
       partialize: (state) => ({
-        user: state.user,
         accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
-        isAuthenticated: state.isAuthenticated,
         currentTenantId: state.currentTenantId,
       }),
+      // On hydration, validate the token is not expired
+      onRehydrateStorage: () => (state) => {
+        if (state?.accessToken && isTokenExpired(state.accessToken)) {
+          state.accessToken = null;
+          state.isAuthenticated = false;
+          state.user = null;
+        }
+      },
     },
   ),
 );

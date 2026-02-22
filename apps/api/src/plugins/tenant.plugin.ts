@@ -16,8 +16,12 @@ const tenantPluginAsync: FastifyPluginAsync = async (fastify) => {
   fastify.decorateRequest("userId", undefined);
 
   fastify.addHook("preHandler", async (request, reply) => {
-    // Skip for public routes
-    if (PUBLIC_PATHS.some((path) => request.url.startsWith(path))) {
+    // Skip for public routes — match exact path or path segment boundary
+    const pathname = request.url.split("?")[0];
+    const isPublic = PUBLIC_PATHS.some(
+      (path) => pathname === path || pathname.startsWith(path + "/"),
+    );
+    if (isPublic) {
       return;
     }
 

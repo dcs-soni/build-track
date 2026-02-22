@@ -71,25 +71,21 @@ const closeRFISchema = z.object({
  * The frontend/reports will display as PROJ-RFI-001
  */
 async function generateRFINumber(
-  prisma: { rFI: { findFirst: Function }; $transaction: Function },
+  tx: { rFI: { findFirst: Function } },
   projectId: string,
 ): Promise<string> {
-  // Use an interactive transaction to prevent race conditions where
-  // two concurrent requests generate the same RFI number.
-  return prisma.$transaction(async (tx: any) => {
-    const lastRFI = await tx.rFI.findFirst({
-      where: { projectId },
-      orderBy: { rfiNumber: "desc" },
-      select: { rfiNumber: true },
-    });
+  const lastRFI = await tx.rFI.findFirst({
+    where: { projectId },
+    orderBy: { rfiNumber: "desc" },
+    select: { rfiNumber: true },
+  });
 
-    if (!lastRFI) {
-      return "001";
-    }
+  if (!lastRFI) {
+    return "001";
+  }
 
-    const lastNum = parseInt(lastRFI.rfiNumber, 10);
-    return (lastNum + 1).toString().padStart(4, "0");
-  }, { isolationLevel: "Serializable" });
+  const lastNum = parseInt(lastRFI.rfiNumber, 10);
+  return (lastNum + 1).toString().padStart(3, "0");
 }
 
 /**
@@ -113,7 +109,6 @@ function canTransition(from: string, to: string): boolean {
 // =============================================================================
 
 export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
-
   // ---------------------------------------------------------------------------
   // LIST RFIs FOR A PROJECT
   // ---------------------------------------------------------------------------
@@ -244,33 +239,36 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    // Generate RFI number
-    const rfiNumber = await generateRFINumber(fastify.prisma, body.projectId);
-
     // Extract distribution list
     const { distributionUserIds, ...rfiData } = body;
 
-    // Create RFI
-    const rfi = await fastify.prisma.rFI.create({
-      data: {
-        ...rfiData,
-        rfiNumber,
-        tenantId,
-        createdBy: userId,
-        dateRequired: new Date(body.dateRequired),
-        ballInCourt: body.ballInCourt || "contractor",
-        // Create distribution list
-        distributions: distributionUserIds?.length
-          ? {
-              create: distributionUserIds.map((uid) => ({ userId: uid })),
-            }
-          : undefined,
+    // Generate RFI number and create RFI atomically to prevent duplicates
+    const rfi = await fastify.prisma.$transaction(
+      async (tx) => {
+        const rfiNumber = await generateRFINumber(tx, body.projectId);
+
+        return tx.rFI.create({
+          data: {
+            ...rfiData,
+            rfiNumber,
+            tenantId,
+            createdBy: userId,
+            dateRequired: new Date(body.dateRequired),
+            ballInCourt: body.ballInCourt || "contractor",
+            distributions: distributionUserIds?.length
+              ? {
+                  create: distributionUserIds.map((uid) => ({ userId: uid })),
+                }
+              : undefined,
+          },
+          include: {
+            assignedTo: { select: { id: true, name: true } },
+            creator: { select: { id: true, name: true } },
+          },
+        });
       },
-      include: {
-        assignedTo: { select: { id: true, name: true } },
-        creator: { select: { id: true, name: true } },
-      },
-    });
+      { isolationLevel: "Serializable" },
+    );
 
     // Log activity
     await fastify.prisma.activityLog.create({
@@ -281,21 +279,20 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
         action: "created",
         entityType: "rfi",
         entityId: rfi.id,
-        entityName: `RFI-${rfiNumber}: ${body.subject}`,
+        entityName: `RFI-${rfi.rfiNumber}: ${body.subject}`,
       },
     });
 
-    const notifyIds = [
-      rfi.assignedToId,
-      ...(distributionUserIds || []),
-    ].filter(Boolean) as string[];
+    const notifyIds = [rfi.assignedToId, ...(distributionUserIds || [])].filter(
+      Boolean,
+    ) as string[];
 
     await notifyUsers(fastify.prisma, {
       tenantId,
       actorId: userId,
       userIds: notifyIds,
       type: "rfi_assigned",
-      title: `RFI-${rfiNumber}: ${body.subject}`,
+      title: `RFI-${rfi.rfiNumber}: ${body.subject}`,
       message: "New RFI requires your attention.",
       link: `/projects/${body.projectId}`,
       priority: rfi.priority as "low" | "normal" | "high" | "urgent",
@@ -347,13 +344,28 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
     const { distributionUserIds, ...dataWithoutDistribution } =
       updateData as any;
 
-    const updated = await fastify.prisma.rFI.update({
-      where: { id },
-      data: dataWithoutDistribution,
-      include: {
-        assignedTo: { select: { id: true, name: true } },
-        creator: { select: { id: true, name: true } },
-      },
+    const updated = await fastify.prisma.$transaction(async (tx) => {
+      // Reconcile distribution list atomically when provided
+      if (distributionUserIds !== undefined) {
+        await tx.rFIDistribution.deleteMany({ where: { rfiId: id } });
+        if (distributionUserIds?.length) {
+          await tx.rFIDistribution.createMany({
+            data: distributionUserIds.map((uid: string) => ({
+              rfiId: id,
+              userId: uid,
+            })),
+          });
+        }
+      }
+
+      return tx.rFI.update({
+        where: { id },
+        data: dataWithoutDistribution,
+        include: {
+          assignedTo: { select: { id: true, name: true } },
+          creator: { select: { id: true, name: true } },
+        },
+      });
     });
 
     // Log activity
@@ -506,9 +518,7 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
     await notifyUsers(fastify.prisma, {
       tenantId: tenantId!,
       actorId: userId!,
-      userIds: [rfi.createdBy, rfi.assignedToId].filter(
-        Boolean,
-      ) as string[],
+      userIds: [rfi.createdBy, rfi.assignedToId].filter(Boolean) as string[],
       type: "rfi_response",
       title: `RFI-${rfi.rfiNumber}: ${rfi.subject}`,
       message: body.isOfficial

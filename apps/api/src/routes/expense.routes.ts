@@ -28,11 +28,9 @@ const updateExpenseSchema = z.object({
   description: z.string().optional(),
   category: z.string().optional(),
   receiptUrl: z.string().url().optional(),
-  status: z.enum(["pending", "approved", "rejected"]).optional(),
 });
 
 export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
-
   // List expenses for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
     const { projectId } = request.params as { projectId: string };
@@ -102,12 +100,10 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.userId;
 
     if (!tenantId) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: { code: "NO_TENANT", message: "Tenant context required" },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: { code: "NO_TENANT", message: "Tenant context required" },
+      });
     }
 
     const body = createExpenseSchema.parse(request.body);
@@ -117,12 +113,10 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id: body.projectId, tenantId },
     });
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Project not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Project not found" },
+      });
     }
 
     // Create expense and update budget item actual cost
@@ -154,28 +148,26 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.patch("/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     const tenantId = request.tenantId;
-    const userId = request.userId;
     const body = updateExpenseSchema.parse(request.body);
 
     const existing = await fastify.prisma.expense.findFirst({
       where: { id, tenantId },
     });
     if (!existing) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Expense not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Expense not found" },
+      });
     }
 
-    const updateData: Record<string, unknown> = { ...body };
-
-    // Handle approval
-    if (body.status === "approved") {
-      updateData.approvedBy = userId;
-      updateData.approvedAt = new Date();
-    }
+    // Strip any status/approval fields — these can only be changed
+    // through the dedicated /approve and /reject endpoints.
+    const {
+      status: _s,
+      approvedBy: _ab,
+      approvedAt: _at,
+      ...updateData
+    } = body as Record<string, unknown>;
 
     const expense = await fastify.prisma.expense.update({
       where: { id },
@@ -194,12 +186,10 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id, tenantId },
     });
     if (!existing) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Expense not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Expense not found" },
+      });
     }
 
     // Rollback budget item actual cost if linked
@@ -228,15 +218,13 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (expense.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: {
-            code: "NOT_FOUND",
-            message: "Expense not found or already processed",
-          },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: "Expense not found or already processed",
+        },
+      });
     }
 
     const updated = await fastify.prisma.expense.findFirst({ where: { id } });
@@ -253,15 +241,13 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (expense.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: {
-            code: "NOT_FOUND",
-            message: "Expense not found or already processed",
-          },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: "Expense not found or already processed",
+        },
+      });
     }
 
     const updated = await fastify.prisma.expense.findFirst({ where: { id } });

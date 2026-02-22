@@ -3,7 +3,9 @@ import { z } from "zod";
 
 const createReportSchema = z.object({
   projectId: z.string().uuid(),
-  reportDate: z.string(),
+  reportDate: z.string().refine((s) => !isNaN(Date.parse(s)), {
+    message: "reportDate must be a valid ISO date string",
+  }),
   weather: z.string().optional(),
   temperature: z.number().optional(),
   humidity: z.number().optional(),
@@ -20,7 +22,6 @@ const updateReportSchema = createReportSchema
   .omit({ projectId: true, reportDate: true });
 
 export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
-
   // List reports for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
     const { projectId } = request.params as { projectId: string };
@@ -28,9 +29,39 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
     const {
       startDate,
       endDate,
-      page = "1",
-      limit = "20",
+      page: rawPage = "1",
+      limit: rawLimit = "20",
     } = request.query as Record<string, string>;
+
+    const parsedPage = Number(rawPage);
+    const parsedLimit = Number(rawLimit);
+
+    if (!Number.isFinite(parsedPage) || !Number.isFinite(parsedLimit)) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "INVALID_PARAMS",
+          message: "page and limit must be valid numbers",
+        },
+      });
+    }
+
+    const page = Math.max(Math.floor(parsedPage), 1);
+    const limit = Math.min(Math.max(Math.floor(parsedLimit), 1), 100);
+
+    // Validate date query params if provided
+    if (
+      (startDate && isNaN(Date.parse(startDate))) ||
+      (endDate && isNaN(Date.parse(endDate)))
+    ) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "INVALID_PARAMS",
+          message: "startDate and endDate must be valid ISO date strings",
+        },
+      });
+    }
 
     const where = {
       projectId,
@@ -44,8 +75,8 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
     const [reports, total] = await Promise.all([
       fastify.prisma.dailyReport.findMany({
         where,
-        skip: (parseInt(page) - 1) * parseInt(limit),
-        take: Math.min(parseInt(limit), 100),
+        skip: (page - 1) * limit,
+        take: limit,
         orderBy: { reportDate: "desc" },
         include: {
           author: { select: { name: true, avatarUrl: true } },
@@ -62,10 +93,10 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         items: reports,
         meta: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page,
+          limit,
           total,
-          totalPages: Math.ceil(total / parseInt(limit)),
+          totalPages: Math.ceil(total / limit),
         },
       },
     });
@@ -86,12 +117,10 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!report) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Report not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Report not found" },
+      });
     }
 
     return reply.send({ success: true, data: report });
@@ -103,12 +132,10 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.userId;
 
     if (!tenantId) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: { code: "NO_TENANT", message: "Tenant context required" },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: { code: "NO_TENANT", message: "Tenant context required" },
+      });
     }
 
     const body = createReportSchema.parse(request.body);
@@ -119,41 +146,37 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id: body.projectId, tenantId },
     });
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Project not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Project not found" },
+      });
     }
 
-    // Check if report already exists for this date
-    const existing = await fastify.prisma.dailyReport.findFirst({
-      where: { projectId: body.projectId, reportDate },
-    });
+    // Rely on the DB-level @@unique([projectId, reportDate]) constraint
+    // instead of a non-atomic findFirst pre-check.
+    try {
+      const report = await fastify.prisma.dailyReport.create({
+        data: {
+          ...body,
+          tenantId,
+          reportDate,
+          createdBy: userId,
+        },
+      });
 
-    if (existing) {
-      return reply
-        .status(409)
-        .send({
+      return reply.status(201).send({ success: true, data: report });
+    } catch (err: any) {
+      if (err?.code === "P2002") {
+        return reply.status(409).send({
           success: false,
           error: {
             code: "DUPLICATE",
             message: "Report already exists for this date",
           },
         });
+      }
+      throw err;
     }
-
-    const report = await fastify.prisma.dailyReport.create({
-      data: {
-        ...body,
-        tenantId,
-        reportDate,
-        createdBy: userId,
-      },
-    });
-
-    return reply.status(201).send({ success: true, data: report });
   });
 
   // Update daily report
@@ -168,12 +191,10 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Report not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Report not found" },
+      });
     }
 
     const updated = await fastify.prisma.dailyReport.findFirst({
@@ -188,6 +209,22 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
     const tenantId = request.tenantId;
     const userId = request.userId;
 
+    // Only supervisors and admins can sign off reports
+    const membership = await fastify.prisma.tenantMembership.findFirst({
+      where: { userId, tenantId },
+      select: { role: true },
+    });
+
+    if (!membership || !["ADMIN", "SUPERVISOR"].includes(membership.role)) {
+      return reply.status(403).send({
+        success: false,
+        error: {
+          code: "FORBIDDEN",
+          message: "Only supervisors and admins can sign off reports",
+        },
+      });
+    }
+
     const result = await fastify.prisma.dailyReport.updateMany({
       where: { id, tenantId, supervisorSignOff: false },
       data: {
@@ -198,15 +235,13 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: {
-            code: "NOT_FOUND",
-            message: "Report not found or already signed off",
-          },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: "Report not found or already signed off",
+        },
+      });
     }
 
     const updated = await fastify.prisma.dailyReport.findFirst({
@@ -225,12 +260,10 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Report not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Report not found" },
+      });
     }
 
     return reply.status(204).send();

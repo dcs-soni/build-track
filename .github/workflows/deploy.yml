@@ -4,16 +4,16 @@
 name: Deploy
 
 on:
-  push:
-    branches:
-      - main
-      - develop
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main, develop]
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy to'
+        description: "Environment to deploy to"
         required: true
-        default: 'staging'
+        default: "staging"
         type: choice
         options:
           - staging
@@ -35,6 +35,7 @@ jobs:
   build-images:
     name: Build Docker Images
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     outputs:
       api-image: ${{ steps.meta-api.outputs.tags }}
       web-image: ${{ steps.meta-web.outputs.tags }}
@@ -114,13 +115,13 @@ jobs:
           echo "🚀 Deploying to staging environment..."
           echo "API Image: ${{ needs.build-images.outputs.api-image }}"
           echo "Web Image: ${{ needs.build-images.outputs.web-image }}"
-          
+
           # Add your deployment commands here, e.g.:
           # - SSH to server and docker compose pull/up
           # - kubectl apply for Kubernetes
           # - aws ecs update-service for ECS
           # - etc.
-          
+
           echo "✅ Deployment to staging complete!"
 
       - name: Run smoke tests
@@ -149,9 +150,9 @@ jobs:
           echo "🚀 Deploying to production environment..."
           echo "API Image: ${{ needs.build-images.outputs.api-image }}"
           echo "Web Image: ${{ needs.build-images.outputs.web-image }}"
-          
+
           # Add your production deployment commands here
-          
+
           echo "✅ Deployment to production complete!"
 
       - name: Run smoke tests
