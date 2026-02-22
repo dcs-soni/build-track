@@ -20,19 +20,6 @@ const updateReportSchema = createReportSchema
   .omit({ projectId: true, reportDate: true });
 
 export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth hook
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply
-        .status(401)
-        .send({
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Authentication required" },
-        });
-    }
-  });
 
   // List reports for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
@@ -58,7 +45,7 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.dailyReport.findMany({
         where,
         skip: (parseInt(page) - 1) * parseInt(limit),
-        take: parseInt(limit),
+        take: Math.min(parseInt(limit), 100),
         orderBy: { reportDate: "desc" },
         include: {
           author: { select: { name: true, avatarUrl: true } },

@@ -31,17 +31,6 @@ const updateProjectSchema = createProjectSchema.partial().extend({
 });
 
 export const projectRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth hook for all routes
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply.status(401).send({
-        success: false,
-        error: { code: "UNAUTHORIZED", message: "Authentication required" },
-      });
-    }
-  });
 
   // List projects
   fastify.get("/", async (request, reply) => {
@@ -72,7 +61,7 @@ export const projectRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.project.findMany({
         where,
         skip: (parseInt(page) - 1) * parseInt(limit),
-        take: parseInt(limit),
+        take: Math.min(parseInt(limit), 100),
         orderBy: { createdAt: "desc" },
       }),
       fastify.prisma.project.count({ where }),

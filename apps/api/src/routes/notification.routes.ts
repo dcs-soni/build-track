@@ -20,17 +20,6 @@ const preferenceSchema = z.object({
 });
 
 export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth hook
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply.status(401).send({
-        success: false,
-        error: { code: "UNAUTHORIZED", message: "Authentication required" },
-      });
-    }
-  });
 
   fastify.get("/", async (request, reply) => {
     const tenantId = request.tenantId;

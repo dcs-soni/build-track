@@ -1,9 +1,9 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
 import crypto from "crypto";
 
 export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
   // Auth hook for admin routes
-  const authHook = async (request: any, reply: any) => {
+  const authHook = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       await request.jwtVerify();
     } catch {
@@ -227,7 +227,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
         takenAt: true,
       },
       orderBy: { takenAt: "desc" },
-      take: parseInt(limit),
+      take: Math.min(parseInt(limit), 100),
     });
 
     return reply.send({ success: true, data: photos });

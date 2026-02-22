@@ -27,17 +27,6 @@ const updateTaskSchema = z.object({
 });
 
 export const taskRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth hook
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply.status(401).send({
-        success: false,
-        error: { code: "UNAUTHORIZED", message: "Authentication required" },
-      });
-    }
-  });
 
   // Create task
   fastify.post("/", async (request, reply) => {

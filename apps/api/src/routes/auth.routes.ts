@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import * as argon2 from "argon2";
 import crypto from "crypto";
+import { createHash } from "crypto";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -69,7 +70,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     await fastify.prisma.refreshToken.create({
       data: {
         userId: result.user.id,
-        token: refreshToken,
+        token: createHash("sha256").update(refreshToken).digest("hex"),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
@@ -137,7 +138,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     await fastify.prisma.refreshToken.create({
       data: {
         userId: user.id,
-        token: refreshToken,
+        token: createHash("sha256").update(refreshToken).digest("hex"),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
@@ -177,7 +178,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const storedToken = await fastify.prisma.refreshToken.findUnique({
-      where: { token: refreshToken },
+      where: { token: createHash("sha256").update(refreshToken).digest("hex") },
     });
 
     if (
@@ -222,7 +223,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     await fastify.prisma.refreshToken.create({
       data: {
         userId: user.id,
-        token: newRefreshToken,
+        token: createHash("sha256").update(newRefreshToken).digest("hex"),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });

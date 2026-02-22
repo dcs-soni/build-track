@@ -32,19 +32,6 @@ const updateExpenseSchema = z.object({
 });
 
 export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth hook
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply
-        .status(401)
-        .send({
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Authentication required" },
-        });
-    }
-  });
 
   // List expenses for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
@@ -74,7 +61,7 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.expense.findMany({
         where,
         skip: (parseInt(page) - 1) * parseInt(limit),
-        take: parseInt(limit),
+        take: Math.min(parseInt(limit), 100),
         orderBy: { expenseDate: "desc" },
         include: {
           budgetItem: { select: { category: true, description: true } },

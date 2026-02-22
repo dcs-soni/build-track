@@ -1,0 +1,53 @@
+# PR Labeler Configuration
+# Auto-labels PRs based on changed files
+
+# App labels
+api:
+  - changed-files:
+    - any-glob-to-any-file: 'apps/api/**'
+
+web:
+  - changed-files:
+    - any-glob-to-any-file: 'apps/web/**'
+
+# Package labels
+database:
+  - changed-files:
+    - any-glob-to-any-file: 'packages/database/**'
+
+shared:
+  - changed-files:
+    - any-glob-to-any-file: 'packages/shared/**'
+
+# Type labels
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.md'
+      - 'docs/**'
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/package.json'
+      - 'pnpm-lock.yaml'
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**'
+      - 'turbo.json'
+
+docker:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/Dockerfile*'
+      - 'docker-compose*.yml'
+      - '.dockerignore'
+
+config:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.config.*'
+      - '**/tsconfig*.json'
+      - '.env*'

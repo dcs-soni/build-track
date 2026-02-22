@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import crypto from "crypto";
 
@@ -9,7 +9,7 @@ const createInvitationSchema = z.object({
 
 export const invitationRoutes: FastifyPluginAsync = async (fastify) => {
   // Auth hook for protected routes
-  const authHook = async (request: any, reply: any) => {
+  const authHook = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       await request.jwtVerify();
     } catch {
@@ -226,7 +226,7 @@ export const invitationRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Generate tokens for auto-login
     const accessToken = fastify.jwt.sign(
-      { userId: user.id, tenantId: invitation.tenantId },
+      { sub: user.id, tenantId: invitation.tenantId },
       { expiresIn: process.env.JWT_EXPIRES_IN || "15m" },
     );
 

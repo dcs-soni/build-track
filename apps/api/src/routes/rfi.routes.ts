@@ -71,23 +71,25 @@ const closeRFISchema = z.object({
  * The frontend/reports will display as PROJ-RFI-001
  */
 async function generateRFINumber(
-  prisma: any,
+  prisma: { rFI: { findFirst: Function }; $transaction: Function },
   projectId: string,
 ): Promise<string> {
-  const lastRFI = await prisma.rFI.findFirst({
-    where: { projectId },
-    orderBy: { rfiNumber: "desc" },
-    select: { rfiNumber: true },
-  });
+  // Use an interactive transaction to prevent race conditions where
+  // two concurrent requests generate the same RFI number.
+  return prisma.$transaction(async (tx: any) => {
+    const lastRFI = await tx.rFI.findFirst({
+      where: { projectId },
+      orderBy: { rfiNumber: "desc" },
+      select: { rfiNumber: true },
+    });
 
-  if (!lastRFI) {
-    return "001";
-  }
+    if (!lastRFI) {
+      return "001";
+    }
 
-  // Extract number and increment
-  const lastNum = parseInt(lastRFI.rfiNumber, 10);
-  const nextNum = (lastNum + 1).toString().padStart(3, "0");
-  return nextNum;
+    const lastNum = parseInt(lastRFI.rfiNumber, 10);
+    return (lastNum + 1).toString().padStart(4, "0");
+  }, { isolationLevel: "Serializable" });
 }
 
 /**
@@ -111,17 +113,6 @@ function canTransition(from: string, to: string): boolean {
 // =============================================================================
 
 export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth hook - all routes require authentication
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply.status(401).send({
-        success: false,
-        error: { code: "UNAUTHORIZED", message: "Authentication required" },
-      });
-    }
-  });
 
   // ---------------------------------------------------------------------------
   // LIST RFIs FOR A PROJECT

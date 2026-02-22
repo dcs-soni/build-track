@@ -38,19 +38,6 @@ const updatePhotoSchema = z.object({
 });
 
 export const photoRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth hook
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply
-        .status(401)
-        .send({
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Authentication required" },
-        });
-    }
-  });
 
   // List photos for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
@@ -78,7 +65,7 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.photo.findMany({
         where,
         skip: (parseInt(page) - 1) * parseInt(limit),
-        take: parseInt(limit),
+        take: Math.min(parseInt(limit), 100),
         orderBy: { takenAt: "desc" },
         include: {
           uploader: { select: { id: true, name: true } },
