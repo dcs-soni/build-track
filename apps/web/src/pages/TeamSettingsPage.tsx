@@ -3,6 +3,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserPlus, Mail, Clock, RefreshCw, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 
+interface InvitationItem {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  createdAt: string;
+  expiresAt?: string;
+  inviter?: { name: string };
+}
+
 export function TeamSettingsPage() {
   const [showInvite, setShowInvite] = useState(false);
   const queryClient = useQueryClient();
@@ -74,7 +84,7 @@ export function TeamSettingsPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {invitations.map((inv: any) => (
+            {invitations.map((inv: InvitationItem) => (
               <div
                 key={inv.id}
                 className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
@@ -94,7 +104,7 @@ export function TeamSettingsPage() {
                 <div className="flex items-center gap-2">
                   <span className="flex items-center gap-1 text-sm text-gray-500">
                     <Clock className="h-4 w-4" />
-                    Expires {new Date(inv.expiresAt).toLocaleDateString()}
+                    Expires {new Date(inv.expiresAt ?? "").toLocaleDateString()}
                   </span>
                   <button
                     onClick={() => resendMutation.mutate(inv.id)}

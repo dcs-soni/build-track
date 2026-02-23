@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   FolderKanban,
   TrendingUp,
@@ -13,7 +14,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { projectsApi } from "@/lib/api";
-import { useAuthStore } from "@/stores/auth.store";
+
 import { formatCurrency } from "@buildtrack/shared";
 
 // Animated counter hook
@@ -54,10 +55,11 @@ function MetricCard({
   value: string | number;
   change?: string;
   changeType?: "positive" | "negative" | "neutral";
-  icon: any;
+  icon: LucideIcon;
 }) {
-  const animatedValue =
-    typeof value === "number" ? useAnimatedCounter(value) : value;
+  const numericValue = typeof value === "number" ? value : 0;
+  const animatedCount = useAnimatedCounter(numericValue);
+  const animatedValue = typeof value === "number" ? animatedCount : value;
 
   return (
     <div className="bg-[#0A0A0A] border border-[#1A1A1A] p-6 group hover:border-[#2A2A2A] transition-all duration-500">
@@ -95,7 +97,14 @@ function MetricCard({
 }
 
 // Project Row Component
-function ProjectRow({ project }: { project: any }) {
+interface ProjectRowItem {
+  id: string;
+  name: string;
+  client?: string;
+  budget?: number;
+  status: string;
+}
+function ProjectRow({ project }: { project: ProjectRowItem }) {
   const statusColors: Record<string, string> = {
     active: "bg-[#4A9079]",
     planning: "bg-[#A68B5B]",
@@ -135,7 +144,12 @@ function ProjectRow({ project }: { project: any }) {
 }
 
 // Activity Item Component
-function ActivityItem({ activity }: { activity: any }) {
+interface ActivityItem {
+  id: number;
+  description: string;
+  time: string;
+}
+function ActivityItem({ activity }: { activity: ActivityItem }) {
   return (
     <div className="flex items-start gap-4 py-3 border-b border-[#1A1A1A] last:border-0">
       <div className="w-8 h-8 border border-[#2A2A2A] flex items-center justify-center text-[#4A5568] mt-0.5">
@@ -167,8 +181,6 @@ function MiniChart() {
 }
 
 export function DashboardPage() {
-  const { user } = useAuthStore();
-
   const { data: projectsData, isLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: () => projectsApi.list(),
@@ -178,10 +190,12 @@ export function DashboardPage() {
 
   const stats = {
     total: projects.length,
-    active: projects.filter((p: any) => p.status === "active").length,
-    completed: projects.filter((p: any) => p.status === "completed").length,
+    active: projects.filter((p: ProjectRowItem) => p.status === "active")
+      .length,
+    completed: projects.filter((p: ProjectRowItem) => p.status === "completed")
+      .length,
     budget: projects.reduce(
-      (sum: number, p: any) => sum + Number(p.budget || 0),
+      (sum: number, p: ProjectRowItem) => sum + Number(p.budget || 0),
       0,
     ),
   };
@@ -284,7 +298,7 @@ export function DashboardPage() {
             <div className="py-12 text-center text-[#4A5568]">Loading...</div>
           ) : projects.length > 0 ? (
             <div>
-              {projects.slice(0, 5).map((project: any) => (
+              {projects.slice(0, 5).map((project: ProjectRowItem) => (
                 <ProjectRow key={project.id} project={project} />
               ))}
             </div>

@@ -30,8 +30,11 @@ export function LoginPage() {
       setAuth(user, tokens, tenantId);
       navigate("/dashboard");
     },
-    onError: (err: any) => {
-      setError(err.response?.data?.error?.message || "Authentication failed");
+    onError: (error: unknown) => {
+      const msg = (
+        error as { response?: { data?: { error?: { message?: string } } } }
+      )?.response?.data?.error?.message;
+      setError(msg || "Login failed");
     },
   });
 

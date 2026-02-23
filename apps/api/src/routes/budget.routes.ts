@@ -30,19 +30,6 @@ const updateBudgetItemSchema = z.object({
 });
 
 export const budgetRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth hook
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply
-        .status(401)
-        .send({
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Authentication required" },
-        });
-    }
-  });
 
   // Get budget analytics for a project
   fastify.get("/projects/:projectId/analytics", async (request, reply) => {

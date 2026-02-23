@@ -12,9 +12,33 @@ import {
 import { api } from "@/lib/api";
 import { formatCurrency } from "@buildtrack/shared";
 
+import type { LucideIcon } from "lucide-react";
+
+interface PermitItem {
+  id: string;
+  permitNumber?: string;
+  permitType?: string;
+  type: string;
+  status: string;
+  projectId: string;
+  issuingAgency?: string;
+  issuingAuthority?: string;
+  fees?: number;
+  fee?: number;
+  submittedAt?: string;
+  approvedAt?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  expiresAt?: string;
+  isExpired?: boolean;
+  isExpiringSoon?: boolean;
+  daysToExpiry?: number | null;
+  notes?: string;
+}
+
 const statusConfig: Record<
   string,
-  { icon: any; color: string; label: string }
+  { icon: LucideIcon; color: string; label: string }
 > = {
   pending: {
     icon: Clock,
@@ -93,7 +117,7 @@ export function PermitsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {permits.map((permit: any) => {
+          {permits.map((permit: PermitItem) => {
             const config = statusConfig[permit.status] || statusConfig.pending;
             const StatusIcon = config.icon;
 
@@ -151,7 +175,7 @@ export function PermitsPage() {
                     >
                       <span className="text-gray-500">Expires:</span>{" "}
                       {new Date(permit.expiresAt).toLocaleDateString()}
-                      {permit.daysToExpiry !== null &&
+                      {permit.daysToExpiry != null &&
                         permit.daysToExpiry > 0 &&
                         !permit.isExpired && (
                           <span className="ml-1">

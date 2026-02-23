@@ -1,20 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 
 export const activityRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth hook
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply
-        .status(401)
-        .send({
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Authentication required" },
-        });
-    }
-  });
-
   // Get activity for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
     const { projectId } = request.params as { projectId: string };
@@ -37,7 +23,7 @@ export const activityRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.activityLog.findMany({
         where,
         skip: (parseInt(page) - 1) * parseInt(limit),
-        take: parseInt(limit),
+        take: Math.min(parseInt(limit), 100),
         orderBy: { createdAt: "desc" },
         include: {
           user: { select: { id: true, name: true, avatarUrl: true } },
@@ -71,7 +57,7 @@ export const activityRoutes: FastifyPluginAsync = async (fastify) => {
 
     const activities = await fastify.prisma.activityLog.findMany({
       where: { tenantId },
-      take: parseInt(limit),
+      take: Math.min(parseInt(limit), 100),
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { id: true, name: true, avatarUrl: true } },
@@ -208,7 +194,7 @@ function formatActivityDescription(
 
 // Activity logging helper (to be used by other routes)
 export async function logActivity(
-  prisma: any,
+  prisma: import("@buildtrack/database").PrismaClient,
   {
     tenantId,
     projectId,
@@ -245,8 +231,10 @@ export async function logActivity(
         entityType,
         entityId,
         entityName,
-        changes: changes || {},
-        metadata: metadata || {},
+        changes: (changes ||
+          {}) as import("@buildtrack/database").Prisma.InputJsonValue,
+        metadata: (metadata ||
+          {}) as import("@buildtrack/database").Prisma.InputJsonValue,
         ipAddress,
         userAgent,
       },

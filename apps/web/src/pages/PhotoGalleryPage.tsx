@@ -1,8 +1,24 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Image, Grid, List, Filter, X } from "lucide-react";
+import { Image, Grid, List, X } from "lucide-react";
 import { api } from "@/lib/api";
+
+interface PhotoItem {
+  id: string;
+  url: string;
+  thumbnailUrl?: string;
+  caption?: string;
+  category?: string;
+  createdAt?: string;
+  takenAt?: string;
+  uploadedBy?: { name: string };
+}
+
+interface CategoryStat {
+  category: string;
+  count: number;
+}
 
 const categoryColors: Record<string, string> = {
   progress: "bg-blue-100 text-blue-700",
@@ -18,7 +34,7 @@ export function PhotoGalleryPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<PhotoItem | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["photos", projectId, selectedCategory],
@@ -69,7 +85,7 @@ export function PhotoGalleryPage() {
         >
           All ({stats.total})
         </button>
-        {stats.byCategory.map((cat: any) => (
+        {stats.byCategory.map((cat: CategoryStat) => (
           <button
             key={cat.category}
             onClick={() => setSelectedCategory(cat.category)}
@@ -93,7 +109,7 @@ export function PhotoGalleryPage() {
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {photos.map((photo: any) => (
+          {photos.map((photo: PhotoItem) => (
             <div
               key={photo.id}
               className="relative group cursor-pointer rounded-xl overflow-hidden bg-gray-100 aspect-square"
@@ -125,7 +141,7 @@ export function PhotoGalleryPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {photos.map((photo: any) => (
+          {photos.map((photo: PhotoItem) => (
             <div
               key={photo.id}
               className="flex items-center gap-4 bg-white rounded-xl border border-gray-200 p-3 cursor-pointer hover:bg-gray-50"
@@ -141,7 +157,9 @@ export function PhotoGalleryPage() {
                   {photo.caption || "Untitled"}
                 </p>
                 <p className="text-sm text-gray-500">
-                  {new Date(photo.takenAt).toLocaleDateString()}
+                  {new Date(
+                    photo.takenAt ?? photo.createdAt ?? "",
+                  ).toLocaleDateString()}
                 </p>
               </div>
               {photo.category && (
@@ -189,7 +207,9 @@ export function PhotoGalleryPage() {
                 <p className="text-lg">{selectedPhoto.caption}</p>
               )}
               <p className="text-gray-400 text-sm mt-1">
-                {new Date(selectedPhoto.takenAt).toLocaleString()}
+                {new Date(
+                  selectedPhoto.takenAt ?? selectedPhoto.createdAt ?? "",
+                ).toLocaleString()}
               </p>
             </div>
           </div>

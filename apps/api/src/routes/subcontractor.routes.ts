@@ -23,20 +23,6 @@ const updateSubcontractorSchema = createSubcontractorSchema.partial().extend({
 });
 
 export const subcontractorRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth hook
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply
-        .status(401)
-        .send({
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Authentication required" },
-        });
-    }
-  });
-
   // List subcontractors
   fastify.get("/", async (request, reply) => {
     const tenantId = request.tenantId;
@@ -44,9 +30,26 @@ export const subcontractorRoutes: FastifyPluginAsync = async (fastify) => {
       trade,
       search,
       active,
-      page = "1",
-      limit = "20",
+      page: rawPage = "1",
+      limit: rawLimit = "20",
     } = request.query as Record<string, string>;
+
+    // Validate and bound pagination params
+    const parsedPage = Number(rawPage);
+    const parsedLimit = Number(rawLimit);
+
+    if (!Number.isFinite(parsedPage) || !Number.isFinite(parsedLimit)) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "INVALID_PARAMS",
+          message: "page and limit must be valid numbers",
+        },
+      });
+    }
+
+    const page = Math.max(Math.floor(parsedPage), 1);
+    const limit = Math.min(Math.max(Math.floor(parsedLimit), 1), 100);
 
     const where = {
       tenantId,
@@ -64,8 +67,8 @@ export const subcontractorRoutes: FastifyPluginAsync = async (fastify) => {
     const [subcontractors, total] = await Promise.all([
       fastify.prisma.subcontractor.findMany({
         where,
-        skip: (parseInt(page) - 1) * parseInt(limit),
-        take: parseInt(limit),
+        skip: (page - 1) * limit,
+        take: limit,
         orderBy: { companyName: "asc" },
         include: { _count: { select: { tasks: true } } },
       }),
@@ -93,10 +96,10 @@ export const subcontractorRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         items: enriched,
         meta: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page,
+          limit,
           total,
-          totalPages: Math.ceil(total / parseInt(limit)),
+          totalPages: Math.ceil(total / limit),
         },
       },
     });
@@ -125,12 +128,10 @@ export const subcontractorRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!subcontractor) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Subcontractor not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Subcontractor not found" },
+      });
     }
 
     // Get unique projects worked on
@@ -149,12 +150,10 @@ export const subcontractorRoutes: FastifyPluginAsync = async (fastify) => {
     const tenantId = request.tenantId;
 
     if (!tenantId) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: { code: "NO_TENANT", message: "Tenant context required" },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: { code: "NO_TENANT", message: "Tenant context required" },
+      });
     }
 
     const body = createSubcontractorSchema.parse(request.body);
@@ -195,16 +194,14 @@ export const subcontractorRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Subcontractor not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Subcontractor not found" },
+      });
     }
 
     const updated = await fastify.prisma.subcontractor.findFirst({
-      where: { id },
+      where: { id, tenantId },
     });
     return reply.send({ success: true, data: updated });
   });
@@ -219,12 +216,10 @@ export const subcontractorRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Subcontractor not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Subcontractor not found" },
+      });
     }
 
     return reply.status(204).send();

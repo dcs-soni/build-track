@@ -11,6 +11,25 @@ import {
 } from "lucide-react";
 import { projectUpdatesApi, projectsApi } from "@/lib/api";
 import { formatCurrency, formatDate } from "@buildtrack/shared";
+import type { LucideIcon } from "lucide-react";
+
+interface TaskItem {
+  id: string;
+  title: string;
+  status: string;
+  priority?: string;
+  dueDate?: string;
+  assignee?: { name: string };
+}
+
+interface UpdateItem {
+  id: string;
+  title: string;
+  body?: string;
+  audience?: string;
+  createdAt: string;
+  author?: { name: string };
+}
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -66,7 +85,8 @@ export function ProjectDetailPage() {
   }
 
   const tasksCompleted =
-    project.tasks?.filter((t: any) => t.status === "completed").length || 0;
+    project.tasks?.filter((t: TaskItem) => t.status === "completed").length ||
+    0;
   const tasksTotal = project.tasks?.length || 0;
   const progress =
     tasksTotal > 0 ? Math.round((tasksCompleted / tasksTotal) * 100) : 0;
@@ -155,7 +175,7 @@ export function ProjectDetailPage() {
           <div className="p-12 text-center text-gray-500">No tasks yet</div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {project.tasks?.map((task: any) => (
+            {project.tasks?.map((task: TaskItem) => (
               <div
                 key={task.id}
                 className="p-4 flex items-center justify-between"
@@ -258,7 +278,7 @@ export function ProjectDetailPage() {
           {updatesQuery.isLoading ? (
             <div className="p-6 text-gray-500">Loading updates...</div>
           ) : updatesQuery.data?.data?.data?.length ? (
-            updatesQuery.data.data.data.map((update: any) => (
+            updatesQuery.data.data.data.map((update: UpdateItem) => (
               <div key={update.id} className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -277,9 +297,7 @@ export function ProjectDetailPage() {
                         : "bg-gray-100 text-gray-600"
                     }`}
                   >
-                    {update.audience === "client"
-                      ? "Client"
-                      : "Internal"}
+                    {update.audience === "client" ? "Client" : "Internal"}
                   </span>
                 </div>
                 <p className="text-sm text-gray-600 mt-3 whitespace-pre-line">
@@ -303,7 +321,7 @@ function StatCard({
   label,
   value,
 }: {
-  icon: any;
+  icon: LucideIcon;
   label: string;
   value: string;
 }) {

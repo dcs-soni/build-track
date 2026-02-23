@@ -16,16 +16,6 @@ const listQuerySchema = z.object({
 const allowedRoles = new Set(["owner", "admin", "manager"]);
 
 export const projectUpdateRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply.status(401).send({
-        success: false,
-        error: { code: "UNAUTHORIZED", message: "Authentication required" },
-      });
-    }
-  });
 
   fastify.get("/projects/:projectId/updates", async (request, reply) => {
     const { projectId } = request.params as { projectId: string };

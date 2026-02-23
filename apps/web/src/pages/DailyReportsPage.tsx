@@ -4,6 +4,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Calendar, CloudSun, Users, FileText, Check } from "lucide-react";
 import { api } from "@/lib/api";
 
+interface DailyReportItem {
+  id: string;
+  reportDate: string;
+  workSummary?: string;
+  weather?: string;
+  temperature?: number;
+  workersCount?: number;
+  supervisorSignOff?: boolean;
+  author?: { name: string; avatarUrl?: string };
+  photos?: { id: string; url: string }[];
+}
+
 export function DailyReportsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [showCreate, setShowCreate] = useState(false);
@@ -49,7 +61,7 @@ export function DailyReportsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {reports.map((report: any) => (
+          {reports.map((report: DailyReportItem) => (
             <div
               key={report.id}
               className="bg-white rounded-xl border border-gray-200 p-4"
@@ -107,19 +119,27 @@ export function DailyReportsPage() {
                 </p>
               )}
 
-              {report.photos?.length > 0 && (
+              {(report.photos?.length ?? 0) > 0 && (
                 <div className="mt-3 flex gap-2">
-                  {report.photos.slice(0, 4).map((photo: any) => (
-                    <img
-                      key={photo.id}
-                      src={photo.thumbnailUrl || photo.url}
-                      alt=""
-                      className="h-16 w-16 object-cover rounded-lg"
-                    />
-                  ))}
-                  {report.photos.length > 4 && (
+                  {report.photos
+                    ?.slice(0, 4)
+                    .map(
+                      (photo: {
+                        id: string;
+                        url: string;
+                        thumbnailUrl?: string;
+                      }) => (
+                        <img
+                          key={photo.id}
+                          src={photo.thumbnailUrl || photo.url}
+                          alt=""
+                          className="h-16 w-16 object-cover rounded-lg"
+                        />
+                      ),
+                    )}
+                  {(report.photos?.length ?? 0) > 4 && (
                     <div className="h-16 w-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 text-sm">
-                      +{report.photos.length - 4}
+                      +{(report.photos?.length ?? 0) - 4}
                     </div>
                   )}
                 </div>

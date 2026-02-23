@@ -1,19 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 
 export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth hook
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply
-        .status(401)
-        .send({
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Authentication required" },
-        });
-    }
-  });
 
   // Get Gantt chart data for a project
   fastify.get("/projects/:projectId", async (request, reply) => {

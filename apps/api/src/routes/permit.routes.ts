@@ -33,19 +33,6 @@ const updatePermitSchema = createPermitSchema
   });
 
 export const permitRoutes: FastifyPluginAsync = async (fastify) => {
-  // Auth hook
-  fastify.addHook("preHandler", async (request, reply) => {
-    try {
-      await request.jwtVerify();
-    } catch {
-      return reply
-        .status(401)
-        .send({
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Authentication required" },
-        });
-    }
-  });
 
   // List permits for a project
   fastify.get("/projects/:projectId", async (request, reply) => {

@@ -25,6 +25,7 @@ import { notificationRoutes } from "./routes/notification.routes.js";
 import { projectUpdateRoutes } from "./routes/project-updates.routes.js";
 import { tenantPlugin } from "./plugins/tenant.plugin.js";
 import { errorHandler } from "./plugins/error.plugin.js";
+import { authGuardPlugin } from "./plugins/auth-guard.plugin.js";
 
 const envToLogger = {
   development: { transport: { target: "pino-pretty" } },
@@ -46,8 +47,13 @@ export async function buildApp() {
   });
   await app.register(sensible);
   await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
+  if (!process.env.JWT_SECRET) {
+    throw new Error(
+      "JWT_SECRET environment variable is required. The server cannot start without it.",
+    );
+  }
   await app.register(jwt, {
-    secret: process.env.JWT_SECRET || "change-me-in-production",
+    secret: process.env.JWT_SECRET,
   });
 
   // Custom plugins
@@ -64,53 +70,66 @@ export async function buildApp() {
   }));
 
   // ====================
-  // API ROUTES
+  // PUBLIC ROUTES (no auth required)
   // ====================
-
-  // Core
   await app.register(authRoutes, { prefix: "/api/v1/auth" });
-  await app.register(projectRoutes, { prefix: "/api/v1/projects" });
-  await app.register(taskRoutes, { prefix: "/api/v1/tasks" });
 
-  // Feature 1: Budget Analytics
-  await app.register(budgetRoutes, { prefix: "/api/v1/budget" });
-
-  // Feature 2: Daily Reports
-  await app.register(dailyReportRoutes, { prefix: "/api/v1/daily-reports" });
-
-  // Feature 3: Subcontractor Management
-  await app.register(subcontractorRoutes, { prefix: "/api/v1/subcontractors" });
-
-  // Feature 4: Permit Tracker
-  await app.register(permitRoutes, { prefix: "/api/v1/permits" });
-
-  // Feature 5: Photo Documentation
-  await app.register(photoRoutes, { prefix: "/api/v1/photos" });
-
-  // Feature 6: Team Invitations
+  // Invitations & client portal have mixed public/private routes
+  // — they handle auth per-route internally
   await app.register(invitationRoutes, { prefix: "/api/v1/invitations" });
-
-  // Feature 7: Activity Timeline
-  await app.register(activityRoutes, { prefix: "/api/v1/activity" });
-
-  // Feature 8: Expense Tracking
-  await app.register(expenseRoutes, { prefix: "/api/v1/expenses" });
-
-  // Feature 9: Client Portal
   await app.register(clientPortalRoutes, { prefix: "/api/v1/client" });
 
-  // Feature 10: Project Timeline/Gantt
-  await app.register(timelineRoutes, { prefix: "/api/v1/timeline" });
+  // ====================
+  // PROTECTED ROUTES (auth guard applied to all)
+  // ====================
+  await app.register(
+    async function protectedRoutes(instance) {
+      await instance.register(authGuardPlugin);
 
-  // Feature 11: RFI (Request for Information)
-  await app.register(rfiRoutes, { prefix: "/api/v1/rfis" });
+      // Core
+      await instance.register(projectRoutes, { prefix: "/projects" });
+      await instance.register(taskRoutes, { prefix: "/tasks" });
 
-  // Feature 12: Equipment/Asset Tracking
-  await app.register(equipmentRoutes, { prefix: "/api/v1/equipment" });
+      // Budget & Expenses
+      await instance.register(budgetRoutes, { prefix: "/budget" });
+      await instance.register(expenseRoutes, { prefix: "/expenses" });
 
-  // Feature 13: Notifications & Communication
-  await app.register(notificationRoutes, { prefix: "/api/v1/notifications" });
-  await app.register(projectUpdateRoutes, { prefix: "/api/v1" });
+      // Daily Reports
+      await instance.register(dailyReportRoutes, {
+        prefix: "/daily-reports",
+      });
+
+      // Subcontractor Management
+      await instance.register(subcontractorRoutes, {
+        prefix: "/subcontractors",
+      });
+
+      // Permit Tracker
+      await instance.register(permitRoutes, { prefix: "/permits" });
+
+      // Photo Documentation
+      await instance.register(photoRoutes, { prefix: "/photos" });
+
+      // Activity Timeline
+      await instance.register(activityRoutes, { prefix: "/activity" });
+
+      // Project Timeline/Gantt
+      await instance.register(timelineRoutes, { prefix: "/timeline" });
+
+      // RFI (Request for Information)
+      await instance.register(rfiRoutes, { prefix: "/rfis" });
+
+      // Equipment/Asset Tracking
+      await instance.register(equipmentRoutes, { prefix: "/equipment" });
+
+      // Notifications & Communication
+      await instance.register(notificationRoutes, {
+        prefix: "/notifications",
+      });
+      await instance.register(projectUpdateRoutes);
+    },
+    { prefix: "/api/v1" },
+  );
 
   // Graceful shutdown
   app.addHook("onClose", async () => {

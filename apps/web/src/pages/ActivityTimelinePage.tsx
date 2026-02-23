@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   Plus,
@@ -11,7 +12,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 
-const actionIcons: Record<string, any> = {
+const actionIcons: Record<string, LucideIcon> = {
   created: Plus,
   updated: Edit,
   deleted: Trash2,
@@ -43,8 +44,19 @@ export function ActivityTimelinePage() {
   const activities = data?.data?.data?.items || data?.data?.data || [];
 
   // Group activities by date
-  const groupedActivities: Record<string, any[]> = {};
-  activities.forEach((activity: any) => {
+  interface ActivityEntry {
+    id: string;
+    createdAt: string;
+    action: string;
+    entityType: string;
+    entityName?: string;
+    user?: { name: string; avatarUrl?: string };
+    project?: { id: string; name: string };
+    changes?: Record<string, { old?: unknown; new?: unknown }>;
+    description?: string;
+  }
+  const groupedActivities: Record<string, ActivityEntry[]> = {};
+  activities.forEach((activity: ActivityEntry) => {
     const date = new Date(activity.createdAt).toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
@@ -85,7 +97,7 @@ export function ActivityTimelinePage() {
                   {date}
                 </h3>
                 <div className="space-y-4">
-                  {dateActivities.map((activity: any) => {
+                  {dateActivities.map((activity: ActivityEntry) => {
                     const ActionIcon = actionIcons[activity.action] || Edit;
                     const colorClass =
                       actionColors[activity.action] ||
