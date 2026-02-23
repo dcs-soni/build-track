@@ -114,9 +114,11 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     "/login",
     {
-      rateLimit: {
-        max: 5,
-        timeWindow: "1 minute",
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: "1 minute",
+        },
       },
     },
     async (request, reply) => {
@@ -285,9 +287,11 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     "/me",
     {
-      rateLimit: {
-        max: 60,
-        timeWindow: "1 minute",
+      config: {
+        rateLimit: {
+          max: 60,
+          timeWindow: "1 minute",
+        },
       },
     },
     async (request, reply) => {

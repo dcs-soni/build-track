@@ -4,6 +4,21 @@ import { Link } from "react-router-dom";
 import { Plus, Search, Filter } from "lucide-react";
 import { projectsApi } from "@/lib/api";
 
+interface ProjectItem {
+  id: string;
+  name: string;
+  status: string;
+  description?: string;
+  location?: string;
+  city?: string;
+  projectType?: string;
+  startDate?: string;
+  endDate?: string;
+  budget?: number;
+  progress?: number;
+  _count?: { tasks: number; members: number };
+}
+
 export function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -70,7 +85,7 @@ export function ProjectsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project: any) => (
+          {projects.map((project: ProjectItem) => (
             <Link
               key={project.id}
               to={`/projects/${project.id}`}

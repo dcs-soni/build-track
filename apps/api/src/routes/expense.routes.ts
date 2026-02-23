@@ -178,12 +178,12 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Strip any status/approval fields — these can only be changed
     // through the dedicated /approve and /reject endpoints.
-    const {
-      status: _s,
-      approvedBy: _ab,
-      approvedAt: _at,
-      ...updateData
-    } = body as Record<string, unknown>;
+    const rawBody = body as Record<string, unknown>;
+    const updateData: Record<string, unknown> = Object.fromEntries(
+      Object.entries(rawBody).filter(
+        ([k]) => k !== "status" && k !== "approvedBy" && k !== "approvedAt",
+      ),
+    );
 
     const expense = await fastify.prisma.expense.update({
       where: { id },

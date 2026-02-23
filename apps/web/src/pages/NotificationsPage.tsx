@@ -10,6 +10,17 @@ const priorityStyles: Record<string, string> = {
   urgent: "bg-red-100 text-red-700",
 };
 
+interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  message?: string;
+  isRead: boolean;
+  createdAt: string;
+  link?: string;
+  priority?: string;
+}
+
 export function NotificationsPage() {
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
   const queryClient = useQueryClient();
@@ -102,7 +113,7 @@ export function NotificationsPage() {
               You are all caught up.
             </div>
           ) : (
-            notifications.map((notification: any) => (
+            notifications.map((notification: NotificationItem) => (
               <div
                 key={notification.id}
                 className={`bg-white border rounded-xl p-4 ${
@@ -116,7 +127,7 @@ export function NotificationsPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs ${
-                          priorityStyles[notification.priority] ||
+                          priorityStyles[notification.priority ?? "normal"] ||
                           priorityStyles.normal
                         }`}
                       >

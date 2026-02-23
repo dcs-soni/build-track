@@ -1,7 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 
 export const activityRoutes: FastifyPluginAsync = async (fastify) => {
-
   // Get activity for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
     const { projectId } = request.params as { projectId: string };
@@ -195,7 +194,7 @@ function formatActivityDescription(
 
 // Activity logging helper (to be used by other routes)
 export async function logActivity(
-  prisma: any,
+  prisma: import("@buildtrack/database").PrismaClient,
   {
     tenantId,
     projectId,
@@ -232,8 +231,10 @@ export async function logActivity(
         entityType,
         entityId,
         entityName,
-        changes: changes || {},
-        metadata: metadata || {},
+        changes: (changes ||
+          {}) as import("@buildtrack/database").Prisma.InputJsonValue,
+        metadata: (metadata ||
+          {}) as import("@buildtrack/database").Prisma.InputJsonValue,
         ipAddress,
         userAgent,
       },

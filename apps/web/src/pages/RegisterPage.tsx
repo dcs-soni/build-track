@@ -31,8 +31,11 @@ export function RegisterPage() {
       setAuth(user, tokens);
       navigate("/dashboard");
     },
-    onError: (err: any) => {
-      setError(err.response?.data?.error?.message || "Registration failed");
+    onError: (error: unknown) => {
+      const msg = (
+        error as { response?: { data?: { error?: { message?: string } } } }
+      )?.response?.data?.error?.message;
+      setError(msg || "Registration failed");
     },
   });
 

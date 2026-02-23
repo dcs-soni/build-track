@@ -182,17 +182,24 @@ export const equipmentRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Enrich with computed fields
     const now = new Date();
-    const enriched = equipment.map((eq: any) => {
-      const maintenanceDue = eq.nextMaintenanceDate
-        ? new Date(eq.nextMaintenanceDate) <= now
-        : false;
-      return {
-        ...eq,
-        maintenanceDue,
-        totalAssignments: eq._count.assignments,
-        totalMaintenanceRecords: eq._count.maintenanceRecords,
-      };
-    });
+    const enriched = equipment.map(
+      (eq: {
+        id: string;
+        nextMaintenanceDate?: Date | null;
+        _count: { assignments: number; maintenanceRecords: number };
+        [key: string]: unknown;
+      }) => {
+        const maintenanceDue = eq.nextMaintenanceDate
+          ? new Date(eq.nextMaintenanceDate) <= now
+          : false;
+        return {
+          ...eq,
+          maintenanceDue,
+          totalAssignments: eq._count.assignments,
+          totalMaintenanceRecords: eq._count.maintenanceRecords,
+        };
+      },
+    );
 
     return reply.send({ success: true, data: enriched });
   });
@@ -773,14 +780,16 @@ export const equipmentRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     // Enrich with overdue status
-    const enriched = dueMaintenance.map((m: any) => ({
-      ...m,
-      isOverdue: new Date(m.scheduledDate) < now,
-      daysUntilDue: Math.ceil(
-        (new Date(m.scheduledDate).getTime() - now.getTime()) /
-          (1000 * 60 * 60 * 24),
-      ),
-    }));
+    const enriched = dueMaintenance.map(
+      (m: { scheduledDate: Date; [key: string]: unknown }) => ({
+        ...m,
+        isOverdue: new Date(m.scheduledDate) < now,
+        daysUntilDue: Math.ceil(
+          (new Date(m.scheduledDate).getTime() - now.getTime()) /
+            (1000 * 60 * 60 * 24),
+        ),
+      }),
+    );
 
     return reply.send({ success: true, data: enriched });
   });
@@ -866,10 +875,16 @@ export const equipmentRoutes: FastifyPluginAsync = async (fastify) => {
           assignmentsInPeriod: assignmentStats.length,
         },
         byStatus: Object.fromEntries(
-          byStatus.map((s: any) => [s.status, s._count]),
+          byStatus.map((s: { status: string; _count: number }) => [
+            s.status,
+            s._count,
+          ]),
         ),
         byCategory: Object.fromEntries(
-          byCategory.map((c: any) => [c.category, c._count]),
+          byCategory.map((c: { category: string; _count: number }) => [
+            c.category,
+            c._count,
+          ]),
         ),
         maintenance: {
           completedCount: maintenanceCosts._count,

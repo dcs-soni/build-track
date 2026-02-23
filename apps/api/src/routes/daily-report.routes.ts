@@ -165,8 +165,8 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       return reply.status(201).send({ success: true, data: report });
-    } catch (err: any) {
-      if (err?.code === "P2002") {
+    } catch (err: unknown) {
+      if ((err as { code?: string })?.code === "P2002") {
         return reply.status(409).send({
           success: false,
           error: {

@@ -3,6 +3,20 @@ import { useQuery } from "@tanstack/react-query";
 import { Calendar, AlertTriangle, Clock, CheckCircle } from "lucide-react";
 import { api } from "@/lib/api";
 
+interface TimelineTaskItem {
+  id: string;
+  name?: string;
+  title: string;
+  status: string;
+  color?: string;
+  progress?: number;
+  start?: string;
+  end?: string;
+  priority?: string;
+  assignee?: { name: string };
+  daysOverdue?: number;
+}
+
 export function ProjectTimelinePage() {
   const { projectId } = useParams<{ projectId: string }>();
 
@@ -50,7 +64,7 @@ export function ProjectTimelinePage() {
     (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
   );
 
-  const getTaskPosition = (task: any) => {
+  const getTaskPosition = (task: TimelineTaskItem) => {
     if (!task.start) return { left: 0, width: 10 };
     const taskStart = new Date(task.start);
     const taskEnd = task.end
@@ -114,7 +128,7 @@ export function ProjectTimelinePage() {
             Overdue Tasks
           </h3>
           <div className="space-y-2">
-            {overdueTasks.slice(0, 5).map((task: any) => (
+            {overdueTasks.slice(0, 5).map((task: TimelineTaskItem) => (
               <div
                 key={task.id}
                 className="flex items-center justify-between text-sm"
@@ -163,7 +177,7 @@ export function ProjectTimelinePage() {
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {tasks.map((task: any) => {
+            {tasks.map((task: TimelineTaskItem) => {
               const position = getTaskPosition(task);
               return (
                 <div
@@ -191,7 +205,7 @@ export function ProjectTimelinePage() {
                         minWidth: "20px",
                       }}
                     >
-                      {task.progress > 0 && (
+                      {(task.progress ?? 0) > 0 && (
                         <div
                           className="h-full bg-white/30 rounded-full"
                           style={{ width: `${task.progress}%` }}

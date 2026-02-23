@@ -7,6 +7,7 @@ import {
   TrendingDown,
   AlertTriangle,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { api } from "@/lib/api";
 import {
   PieChart,
@@ -59,14 +60,17 @@ export function BudgetAnalyticsPage() {
   }
 
   const { summary, byCategory, overBudgetItems, spendingTrend } = analytics;
-  const categoryData = Object.entries(byCategory).map(
-    ([name, data]: [string, any]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      estimated: data.estimated,
-      actual: data.actual,
-      variance: data.variance,
-    }),
-  );
+  const categoryData = Object.entries(
+    byCategory as Record<
+      string,
+      { estimated: number; actual: number; variance: number }
+    >,
+  ).map(([name, data]) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1),
+    estimated: data.estimated,
+    actual: data.actual,
+    variance: data.variance,
+  }));
 
   return (
     <div className="p-6 space-y-6">
@@ -173,24 +177,31 @@ export function BudgetAnalyticsPage() {
             Over Budget Items
           </h3>
           <div className="space-y-2">
-            {overBudgetItems.map((item: any) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between bg-white p-3 rounded-lg"
-              >
-                <div>
-                  <span className="font-medium text-gray-900">
-                    {item.description}
-                  </span>
-                  <span className="text-sm text-gray-500 ml-2">
-                    ({item.category})
+            {overBudgetItems.map(
+              (item: {
+                id: string;
+                description: string;
+                category: string;
+                overBy: number;
+              }) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between bg-white p-3 rounded-lg"
+                >
+                  <div>
+                    <span className="font-medium text-gray-900">
+                      {item.description}
+                    </span>
+                    <span className="text-sm text-gray-500 ml-2">
+                      ({item.category})
+                    </span>
+                  </div>
+                  <span className="text-red-600 font-medium">
+                    +{formatCurrency(item.overBy)}
                   </span>
                 </div>
-                <span className="text-red-600 font-medium">
-                  +{formatCurrency(item.overBy)}
-                </span>
-              </div>
-            ))}
+              ),
+            )}
           </div>
         </div>
       )}
@@ -205,7 +216,7 @@ function SummaryCard({
   subtext,
   color,
 }: {
-  icon: any;
+  icon: LucideIcon;
   label: string;
   value: string | number;
   subtext?: string;

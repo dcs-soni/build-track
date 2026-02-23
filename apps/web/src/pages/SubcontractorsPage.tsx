@@ -11,6 +11,31 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 
+interface ExpiringSubEntry {
+  id: string;
+  companyName: string;
+  daysRemaining: number;
+}
+
+interface SubcontractorItem {
+  id: string;
+  companyName: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  trade?: string;
+  status?: string;
+  projectCount?: number;
+  insuranceExpiry?: string;
+  licenseExpiry?: string;
+  isActive: boolean;
+  _count?: {
+    tasks: number;
+  };
+  insuranceExpiring?: boolean;
+  licenseExpiring?: boolean;
+}
+
 export function SubcontractorsPage() {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -69,17 +94,25 @@ export function SubcontractorsPage() {
                 <p className="text-sm text-amber-700 mb-2">
                   Insurance Expiring:
                 </p>
-                {expiring.insurance.slice(0, 3).map((s: any) => (
-                  <p key={s.id} className="text-sm text-gray-700">
-                    {s.companyName} - {s.daysRemaining} days
-                  </p>
-                ))}
+                {expiring.insurance
+                  .slice(0, 3)
+                  .map(
+                    (s: {
+                      id: string;
+                      companyName: string;
+                      daysRemaining: number;
+                    }) => (
+                      <p key={s.id} className="text-sm text-gray-700">
+                        {s.companyName} - {s.daysRemaining} days
+                      </p>
+                    ),
+                  )}
               </div>
             )}
             {expiring.license.length > 0 && (
               <div>
                 <p className="text-sm text-amber-700 mb-2">License Expiring:</p>
-                {expiring.license.slice(0, 3).map((s: any) => (
+                {expiring.license.slice(0, 3).map((s: ExpiringSubEntry) => (
                   <p key={s.id} className="text-sm text-gray-700">
                     {s.companyName} - {s.daysRemaining} days
                   </p>
@@ -115,7 +148,7 @@ export function SubcontractorsPage() {
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {subcontractors.map((sub: any) => (
+          {subcontractors.map((sub: SubcontractorItem) => (
             <div
               key={sub.id}
               className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow"

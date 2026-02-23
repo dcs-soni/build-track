@@ -73,7 +73,7 @@ const closeRFISchema = z.object({
  * The frontend/reports will display as PROJ-RFI-001
  */
 async function generateRFINumber(
-  tx: { rFI: { findFirst: Function } },
+  tx: import("@buildtrack/database").Prisma.TransactionClient,
   projectId: string,
 ): Promise<string> {
   const lastRFI = await tx.rFI.findFirst({
@@ -344,7 +344,9 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Handle distribution list update
     const { distributionUserIds, ...dataWithoutDistribution } =
-      updateData as any;
+      updateData as Record<string, unknown> & {
+        distributionUserIds?: string[];
+      };
 
     const updated = await fastify.prisma.$transaction(async (tx) => {
       // Reconcile distribution list atomically when provided
@@ -712,7 +714,7 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
     const { party } = request.params as { party: string };
     const tenantId = request.tenantId;
 
-    if (!BALL_IN_COURT.includes(party as any)) {
+    if (!(BALL_IN_COURT as readonly string[]).includes(party)) {
       return reply.status(400).send({
         success: false,
         error: { code: "INVALID_PARAM", message: `Invalid party: ${party}` },
