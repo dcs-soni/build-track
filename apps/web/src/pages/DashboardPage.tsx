@@ -13,7 +13,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { projectsApi } from "@/lib/api";
-import { useAuthStore } from "@/stores/auth.store";
+
 import { formatCurrency } from "@buildtrack/shared";
 
 // Animated counter hook
@@ -167,8 +167,6 @@ function MiniChart() {
 }
 
 export function DashboardPage() {
-  const { user } = useAuthStore();
-
   const { data: projectsData, isLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: () => projectsApi.list(),

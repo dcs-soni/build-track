@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Image, Grid, List, Filter, X } from "lucide-react";
+import { Image, Grid, List, X } from "lucide-react";
 import { api } from "@/lib/api";
 
 const categoryColors: Record<string, string> = {
