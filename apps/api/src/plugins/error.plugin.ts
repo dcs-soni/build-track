@@ -36,8 +36,9 @@ const errorHandlerAsync: FastifyPluginAsync = async (fastify) => {
     }
 
     // Handle HTTP errors from @fastify/sensible
-    const statusCode = error.statusCode || 500;
-    const message = statusCode < 500 ? error.message : "Internal server error";
+    const err = error as Error & { statusCode?: number };
+    const statusCode = err.statusCode || 500;
+    const message = statusCode < 500 ? err.message : "Internal server error";
 
     return reply.status(statusCode).send({
       success: false,
