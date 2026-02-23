@@ -2,6 +2,11 @@ import type { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
 import rateLimit from "@fastify/rate-limit";
 
+import { RateLimiter } from "../utils/rate-limiter.util.js";
+
+// Allow 200 JWT verifications per minute per IP (a generous baseline)
+const jwtVerifyLimiter = new RateLimiter(200, 60 * 1000);
+
 /**
  * Shared authentication guard plugin.
  *
@@ -32,6 +37,14 @@ const authGuardAsync: FastifyPluginAsync = async (fastify) => {
 
   // ── JWT + tenant verification ──
   fastify.addHook("preHandler", async (request, reply) => {
+    // Explicit DoS protection before entering the cryptographic verify block
+    if (!jwtVerifyLimiter.check(request.ip)) {
+      return reply.status(429).send({
+        success: false,
+        error: { code: "RATE_LIMITED", message: "Too many requests" },
+      });
+    }
+
     try {
       await request.jwtVerify();
     } catch {

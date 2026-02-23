@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import fp from "fastify-plugin";
+import { TTLCache } from "../utils/cache.util.js";
 
 const PUBLIC_PATHS = [
   "/health",
@@ -10,6 +11,9 @@ const PUBLIC_PATHS = [
   "/api/v1/invitations/accept",
   "/api/v1/client/portal",
 ];
+
+// Cache valid tenant memberships for 5 minutes to prevent DB hammering
+const membershipCache = new TTLCache<boolean>(5 * 60 * 1000);
 
 const tenantPluginAsync: FastifyPluginAsync = async (fastify) => {
   fastify.decorateRequest("tenantId", undefined);
@@ -37,16 +41,26 @@ const tenantPluginAsync: FastifyPluginAsync = async (fastify) => {
       const tenantHeader = request.headers["x-tenant-id"] as string | undefined;
 
       if (tenantHeader && tenantHeader !== decoded.tenantId) {
-        const membership = await fastify.prisma.tenantMembership.findUnique({
-          where: {
-            tenantId_userId: {
-              tenantId: tenantHeader,
-              userId: decoded.sub,
-            },
-          },
-        });
+        const cacheKey = `${decoded.sub}:${tenantHeader}`;
+        let isMember = membershipCache.get(cacheKey);
 
-        if (!membership) {
+        if (isMember === undefined) {
+          const membership = await fastify.prisma.tenantMembership.findUnique({
+            where: {
+              tenantId_userId: {
+                tenantId: tenantHeader,
+                userId: decoded.sub,
+              },
+            },
+          });
+
+          isMember = !!membership;
+          if (isMember) {
+            membershipCache.set(cacheKey, true);
+          }
+        }
+
+        if (!isMember) {
           return reply.status(403).send({
             success: false,
             error: {

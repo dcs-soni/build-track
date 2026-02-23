@@ -4,6 +4,17 @@ import * as argon2 from "argon2";
 import crypto from "crypto";
 import { createHash } from "crypto";
 import rateLimit from "@fastify/rate-limit";
+import { RateLimiter } from "../utils/rate-limiter.util.js";
+import { TTLCache } from "../utils/cache.util.js";
+import type { Prisma } from "@buildtrack/database";
+
+const loginBruteForceLimiter = new RateLimiter(5, 5 * 60 * 1000); // 5 attempts per 5 minutes per IP
+
+type UserWithMemberships = Prisma.UserGetPayload<{
+  include: { memberships: { include: { tenant: true } } };
+}>;
+
+const userProfileCache = new TTLCache<UserWithMemberships | null>(60 * 1000); // 1 minute cache for /me queries
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -122,6 +133,17 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
+      // Manual brute-force/DoS protection explicitly shielding the argon2 call
+      if (!loginBruteForceLimiter.check(request.ip)) {
+        return reply.status(429).send({
+          success: false,
+          error: {
+            code: "RATE_LIMITED",
+            message: "Too many login attempts — please try again later",
+          },
+        });
+      }
+
       const body = loginSchema.parse(request.body);
       const { email, password } = body;
 
@@ -185,6 +207,9 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         where: { id: user.id },
         data: { lastLoginAt: new Date() },
       });
+
+      // Clear rate limit on successful login
+      loginBruteForceLimiter.reset(request.ip);
 
       return reply.send({
         success: true,
@@ -305,10 +330,18 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const user = await fastify.prisma.user.findUnique({
-        where: { id: userId },
-        include: { memberships: { include: { tenant: true } } },
-      });
+      let user = userProfileCache.get(userId);
+
+      if (!user) {
+        user = await fastify.prisma.user.findUnique({
+          where: { id: userId },
+          include: { memberships: { include: { tenant: true } } },
+        });
+
+        if (user) {
+          userProfileCache.set(userId, user);
+        }
+      }
 
       if (!user) {
         return reply.status(404).send({
@@ -324,12 +357,14 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           email: user.email,
           name: user.name,
           avatarUrl: user.avatarUrl,
-          memberships: user.memberships.map((m) => ({
-            tenantId: m.tenantId,
-            tenantName: m.tenant.name,
-            tenantSlug: m.tenant.slug,
-            role: m.role,
-          })),
+          memberships: user.memberships.map(
+            (m: UserWithMemberships["memberships"][number]) => ({
+              tenantId: m.tenantId,
+              tenantName: m.tenant.name,
+              tenantSlug: m.tenant.slug,
+              role: m.role,
+            }),
+          ),
         },
       });
     },
