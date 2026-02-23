@@ -5,7 +5,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
 }
 
 interface AuthState {
@@ -64,19 +64,26 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "buildtrack-auth",
-      // Only persist non-sensitive data — tokens in memory, not localStorage.
-      // accessToken is short-lived and needed for SPA API calls.
-      // refreshToken and user PII are NOT persisted.
+      // accessToken (short-lived JWT) and currentTenantId are persisted to
+      // localStorage so sessions survive page reloads. refreshToken and user
+      // PII are NOT persisted. Note: storing JWTs in localStorage exposes them
+      // to XSS; the short expiry (15 min) limits the window of risk.
       partialize: (state) => ({
         accessToken: state.accessToken,
         currentTenantId: state.currentTenantId,
       }),
       // On hydration, validate the token is not expired
       onRehydrateStorage: () => (state) => {
-        if (state?.accessToken && isTokenExpired(state.accessToken)) {
-          state.accessToken = null;
-          state.isAuthenticated = false;
-          state.user = null;
+        if (!state) return;
+
+        if (
+          state.accessToken &&
+          !isTokenExpired(state.accessToken) &&
+          state.currentTenantId
+        ) {
+          state.isAuthenticated = true;
+        } else {
+          state.logout();
         }
       },
     },

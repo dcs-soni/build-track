@@ -41,7 +41,9 @@ const createRFISchema = z.object({
   priority: z.enum(RFI_PRIORITY).optional(),
   assignedToId: z.string().uuid().optional(),
   ballInCourt: z.enum(BALL_IN_COURT).optional(),
-  dateRequired: z.string(), // ISO date string
+  dateRequired: z.string().refine((s) => !isNaN(Date.parse(s)), {
+    message: "dateRequired must be a valid ISO date string",
+  }),
   costImpact: z.boolean().optional(),
   scheduleImpact: z.boolean().optional(),
   costAmount: z.number().optional(),

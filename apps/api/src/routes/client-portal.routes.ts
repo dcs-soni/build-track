@@ -87,10 +87,20 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
 
       const newToken = crypto.randomBytes(32).toString("hex");
 
-      await fastify.prisma.project.updateMany({
+      const result = await fastify.prisma.project.updateMany({
         where: { id: projectId, tenantId, clientAccessEnabled: true },
         data: { clientAccessToken: hashToken(newToken) },
       });
+
+      if (result.count === 0) {
+        return reply.status(404).send({
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: "Project not found or client access is not enabled",
+          },
+        });
+      }
 
       const portalUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/client/${newToken}`;
 

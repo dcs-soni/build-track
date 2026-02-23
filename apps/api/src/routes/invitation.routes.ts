@@ -167,12 +167,13 @@ export const invitationRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Accept invitation (with optional new user registration)
+  const acceptBodySchema = z.object({
+    name: z.string().min(2),
+    password: z.string().min(8),
+  });
+
   fastify.post("/accept/:token", async (request, reply) => {
     const { token } = request.params as { token: string };
-    const { name, password } = request.body as {
-      name?: string;
-      password?: string;
-    };
 
     const invitation = await fastify.prisma.invitation.findFirst({
       where: {
@@ -199,19 +200,24 @@ export const invitationRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Pre-compute password hash outside the transaction to minimize lock time
     let passwordHash: string | undefined;
+    let name: string | undefined;
     if (!user) {
-      if (!name || !password) {
+      const parsed = acceptBodySchema.safeParse(request.body);
+      if (!parsed.success) {
         return reply.status(400).send({
           success: false,
           error: {
-            code: "REGISTRATION_REQUIRED",
-            message: "Name and password required for new user",
+            code: "VALIDATION_ERROR",
+            message:
+              "Name (min 2 chars) and password (min 8 chars) required for new user",
+            details: parsed.error.flatten().fieldErrors,
           },
         });
       }
 
+      name = parsed.data.name;
       const argon2 = await import("argon2");
-      passwordHash = await argon2.hash(password);
+      passwordHash = await argon2.hash(parsed.data.password);
     }
 
     // Run user creation, membership, and invitation acceptance atomically

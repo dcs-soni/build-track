@@ -40,9 +40,25 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
       status,
       startDate,
       endDate,
-      page = "1",
-      limit = "20",
+      page: rawPage = "1",
+      limit: rawLimit = "20",
     } = request.query as Record<string, string>;
+
+    const parsedPage = Number(rawPage);
+    const parsedLimit = Number(rawLimit);
+
+    if (!Number.isFinite(parsedPage) || !Number.isFinite(parsedLimit)) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "INVALID_PARAMS",
+          message: "page and limit must be valid numbers",
+        },
+      });
+    }
+
+    const page = Math.max(Math.floor(parsedPage), 1);
+    const limit = Math.min(Math.max(Math.floor(parsedLimit), 1), 100);
 
     const where = {
       projectId,
@@ -58,8 +74,8 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
     const [expenses, total] = await Promise.all([
       fastify.prisma.expense.findMany({
         where,
-        skip: (parseInt(page) - 1) * parseInt(limit),
-        take: Math.min(parseInt(limit), 100),
+        skip: (page - 1) * limit,
+        take: limit,
         orderBy: { expenseDate: "desc" },
         include: {
           budgetItem: { select: { category: true, description: true } },
@@ -85,10 +101,10 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
           count: totals._count,
         },
         meta: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page,
+          limit,
           total,
-          totalPages: Math.ceil(total / parseInt(limit)),
+          totalPages: Math.ceil(total / limit),
         },
       },
     });

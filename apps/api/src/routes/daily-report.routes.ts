@@ -198,7 +198,7 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const updated = await fastify.prisma.dailyReport.findFirst({
-      where: { id },
+      where: { id, tenantId },
     });
     return reply.send({ success: true, data: updated });
   });
@@ -245,7 +245,7 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const updated = await fastify.prisma.dailyReport.findFirst({
-      where: { id },
+      where: { id, tenantId },
     });
     return reply.send({ success: true, data: updated });
   });
@@ -275,16 +275,22 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
     const tenantId = request.tenantId;
     const { year, month } = request.query as { year?: string; month?: string };
 
-    const startDate = new Date(
-      parseInt(year || new Date().getFullYear().toString()),
-      parseInt(month || "0") - 1,
-      1,
-    );
-    const endDate = new Date(
-      startDate.getFullYear(),
-      startDate.getMonth() + 1,
-      0,
-    );
+    const now = new Date();
+    const parsedYear = year ? parseInt(year, 10) : now.getFullYear();
+    const parsedMonth = month ? parseInt(month, 10) : now.getMonth() + 1;
+
+    // Validate: year must be a 4-digit number, month must be 1–12
+    const safeYear =
+      Number.isFinite(parsedYear) && parsedYear >= 1970 && parsedYear <= 2100
+        ? parsedYear
+        : now.getFullYear();
+    const safeMonth =
+      Number.isFinite(parsedMonth) && parsedMonth >= 1 && parsedMonth <= 12
+        ? parsedMonth
+        : now.getMonth() + 1;
+
+    const startDate = new Date(safeYear, safeMonth - 1, 1);
+    const endDate = new Date(safeYear, safeMonth, 0);
 
     const reports = await fastify.prisma.dailyReport.findMany({
       where: {

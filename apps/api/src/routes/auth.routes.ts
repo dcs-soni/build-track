@@ -18,9 +18,11 @@ const loginSchema = z.object({
 });
 
 // Pre-computed dummy hash so argon2.verify always runs, preventing timing-based user enumeration.
-// This was generated with argon2.hash("dummy") — the actual value doesn't matter.
+// Generated with: await argon2.hash("dummy-password-never-matches")
+// The actual password doesn't matter — this just needs to be a structurally valid Argon2id hash
+// so that argon2.verify() runs its full computation without throwing.
 const DUMMY_PASSWORD_HASH =
-  "$argon2id$v=19$m=65536,t=3,p=4$dW5rbm93bnNhbHQ$dW5rbm93bmhhc2g";
+  "$argon2id$v=19$m=65536,t=3,p=4$c29tZXJhbmRvbXNhbHQ$YXJnb24yaWRoYXNob3V0cHV0Zm9yZHVtbXk";
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Scoped rate limit for auth routes (conservative default)
@@ -112,11 +114,9 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     "/login",
     {
-      config: {
-        rateLimit: {
-          max: 5,
-          timeWindow: "1 minute",
-        },
+      rateLimit: {
+        max: 5,
+        timeWindow: "1 minute",
       },
     },
     async (request, reply) => {
@@ -132,7 +132,14 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       // If the user doesn't exist, verify against a dummy hash so the response
       // time is indistinguishable from a real failed login.
       const passwordHashToCheck = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
-      const validPassword = await argon2.verify(passwordHashToCheck, password);
+      let validPassword = false;
+      try {
+        validPassword = await argon2.verify(passwordHashToCheck, password);
+      } catch {
+        // Treat any verification error (malformed hash, library failure) as
+        // a failed login to avoid leaking a 500 that enables user enumeration.
+        validPassword = false;
+      }
 
       if (!user || !user.passwordHash || !validPassword) {
         return reply.status(401).send({
@@ -236,15 +243,26 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
+    // Ensure user has a tenant membership — mirror the login handler's guard
+    const defaultMembership = user.memberships[0];
+    if (!defaultMembership) {
+      return reply.status(403).send({
+        success: false,
+        error: {
+          code: "NO_TENANT",
+          message: "User has no associated tenant",
+        },
+      });
+    }
+
     // Revoke old token and create new one
     await fastify.prisma.refreshToken.update({
       where: { id: storedToken.id },
       data: { revokedAt: new Date() },
     });
 
-    const tenantId = user.memberships[0]?.tenantId ?? null;
     const accessToken = fastify.jwt.sign(
-      { sub: user.id, ...(tenantId && { tenantId }) },
+      { sub: user.id, tenantId: defaultMembership.tenantId },
       { expiresIn: process.env.JWT_EXPIRES_IN || "15m" },
     );
     const newRefreshToken = crypto.randomBytes(64).toString("hex");
@@ -267,11 +285,9 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     "/me",
     {
-      config: {
-        rateLimit: {
-          max: 60,
-          timeWindow: "1 minute",
-        },
+      rateLimit: {
+        max: 60,
+        timeWindow: "1 minute",
       },
     },
     async (request, reply) => {
