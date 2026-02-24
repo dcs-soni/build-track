@@ -24,4 +24,15 @@ module.exports = {
     "@typescript-eslint/no-explicit-any": "warn",
     "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
   },
+  overrides: [
+    {
+      files: [
+        ".eslintrc.cjs",
+        "vite.config.ts",
+        "tailwind.config.js",
+        "postcss.config.js",
+      ],
+      env: { node: true },
+    },
+  ],
 };
