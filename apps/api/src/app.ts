@@ -23,6 +23,7 @@ import { rfiRoutes } from "./routes/rfi.routes.js";
 import { equipmentRoutes } from "./routes/equipment.routes.js";
 import { notificationRoutes } from "./routes/notification.routes.js";
 import { projectUpdateRoutes } from "./routes/project-updates.routes.js";
+import { analyticsRoutes } from "./routes/analytics.routes.js";
 import { tenantPlugin } from "./plugins/tenant.plugin.js";
 import { errorHandler } from "./plugins/error.plugin.js";
 import { authGuardPlugin } from "./plugins/auth-guard.plugin.js";
@@ -127,6 +128,9 @@ export async function buildApp() {
         prefix: "/notifications",
       });
       await instance.register(projectUpdateRoutes);
+
+      // Analytics
+      await instance.register(analyticsRoutes, { prefix: "/analytics" });
     },
     { prefix: "/api/v1" },
   );

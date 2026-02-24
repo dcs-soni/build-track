@@ -30,6 +30,11 @@ const BudgetAnalyticsPage = lazy(() =>
     default: m.BudgetAnalyticsPage,
   })),
 );
+const AnalyticsPage = lazy(() =>
+  import("@/pages/AnalyticsPage").then((m) => ({
+    default: m.AnalyticsPage,
+  })),
+);
 const SubcontractorsPage = lazy(() =>
   import("@/pages/SubcontractorsPage").then((m) => ({
     default: m.SubcontractorsPage,
@@ -123,6 +128,12 @@ export default function App() {
 
             {/* Subcontractor Management */}
             <Route path="/subcontractors" element={<SubcontractorsPage />} />
+
+            {/* Top-level Analytics */}
+            <Route path="/budget-analytics" element={<AnalyticsPage />} />
+
+            {/* Top-level Daily Reports (shows all, no project scope) */}
+            <Route path="/daily-reports" element={<DailyReportsPage />} />
 
             {/* Permit Tracker */}
             <Route

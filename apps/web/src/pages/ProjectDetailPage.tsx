@@ -8,10 +8,12 @@ import {
   DollarSign,
   CheckCircle2,
   Clock,
+  ArrowUpRight,
 } from "lucide-react";
 import { projectUpdatesApi, projectsApi } from "@/lib/api";
 import { formatCurrency, formatDate } from "@buildtrack/shared";
 import type { LucideIcon } from "lucide-react";
+import type { AxiosError } from "axios";
 
 interface TaskItem {
   id: string;
@@ -30,6 +32,12 @@ interface UpdateItem {
   createdAt: string;
   author?: { name: string };
 }
+
+const TASK_STATUS_COLORS: Record<string, string> = {
+  completed: "bg-[#4A9079]",
+  in_progress: "bg-[#A68B5B]",
+  todo: "bg-[#3A3A3A]",
+};
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -62,23 +70,23 @@ export function ProjectDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#A68B5B] border-t-transparent" />
       </div>
     );
   }
 
   if (error || !project) {
     return (
-      <div className="p-8">
+      <div className="max-w-7xl mx-auto">
         <Link
           to="/projects"
-          className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 mb-4"
+          className="inline-flex items-center gap-2 text-[#4A5568] hover:text-[#A68B5B] mb-4 text-sm transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Projects
         </Link>
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-          <h3 className="text-gray-900 font-medium">Project not found</h3>
+        <div className="text-center py-16 bg-[#0A0A0A] border border-[#1A1A1A]">
+          <h3 className="text-white font-medium">Project not found</h3>
         </div>
       </div>
     );
@@ -91,35 +99,46 @@ export function ProjectDetailPage() {
   const progress =
     tasksTotal > 0 ? Math.round((tasksCompleted / tasksTotal) * 100) : 0;
 
+  const STATUS_STYLES: Record<string, string> = {
+    planning: "bg-[#4A5568]/20 text-[#718096]",
+    active: "bg-[#A68B5B]/20 text-[#A68B5B]",
+    on_hold: "bg-[#9E534F]/20 text-[#D4796E]",
+    completed: "bg-[#4A9079]/20 text-[#4A9079]",
+    cancelled: "bg-[#9E534F]/20 text-[#9E534F]",
+  };
+
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto">
       <Link
         to="/projects"
-        className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 mb-4"
+        className="inline-flex items-center gap-2 text-[#4A5568] hover:text-[#A68B5B] mb-6 text-sm transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Projects
       </Link>
 
       {/* Header */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      <div className="bg-[#0A0A0A] border border-[#1A1A1A] p-6 mb-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            <p className="text-xs tracking-[0.2em] text-[#A68B5B] uppercase mb-3">
+              Project Detail
+            </p>
+            <h1 className="text-2xl font-medium text-white tracking-tight mb-2">
               {project.name}
             </h1>
-            <p className="text-gray-500">
+            <p className="text-sm text-[#4A5568]">
               {project.description || "No description"}
             </p>
             {project.address && (
-              <div className="flex items-center gap-2 mt-3 text-sm text-gray-500">
-                <MapPin className="h-4 w-4" />
+              <div className="flex items-center gap-2 mt-3 text-xs text-[#4A5568]">
+                <MapPin className="h-3.5 w-3.5" strokeWidth={1.5} />
                 {project.address}, {project.city}
               </div>
             )}
           </div>
           <span
-            className={`px-4 py-2 text-sm font-medium rounded-full ${getStatusColor(project.status)}`}
+            className={`px-3 py-1 text-xs font-medium tracking-wide uppercase ${STATUS_STYLES[project.status] || STATUS_STYLES.planning}`}
           >
             {project.status}
           </span>
@@ -128,15 +147,39 @@ export function ProjectDetailPage() {
         {/* Progress */}
         <div className="mt-6">
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-gray-600">Overall Progress</span>
-            <span className="font-medium text-gray-900">{progress}%</span>
+            <span className="text-xs tracking-[0.1em] text-[#4A5568] uppercase">
+              Overall Progress
+            </span>
+            <span className="text-sm text-white font-medium">{progress}%</span>
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-1 bg-[#1A1A1A] overflow-hidden">
             <div
-              className="h-full bg-blue-600 rounded-full transition-all"
+              className="h-full bg-[#A68B5B] transition-all duration-500"
               style={{ width: `${progress}%` }}
             />
           </div>
+        </div>
+
+        {/* Quick Links */}
+        <div className="mt-6 pt-6 border-t border-[#1A1A1A] flex gap-4">
+          <Link
+            to={`/projects/${id}/budget`}
+            className="text-xs text-[#4A5568] hover:text-[#A68B5B] transition-colors flex items-center gap-1 tracking-wide uppercase"
+          >
+            Budget Analytics <ArrowUpRight className="h-3 w-3" />
+          </Link>
+          <Link
+            to={`/projects/${id}/reports`}
+            className="text-xs text-[#4A5568] hover:text-[#A68B5B] transition-colors flex items-center gap-1 tracking-wide uppercase"
+          >
+            Daily Reports <ArrowUpRight className="h-3 w-3" />
+          </Link>
+          <Link
+            to={`/projects/${id}/timeline`}
+            className="text-xs text-[#4A5568] hover:text-[#A68B5B] transition-colors flex items-center gap-1 tracking-wide uppercase"
+          >
+            Timeline <ArrowUpRight className="h-3 w-3" />
+          </Link>
         </div>
       </div>
 
@@ -167,34 +210,38 @@ export function ProjectDetailPage() {
       </div>
 
       {/* Tasks */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Tasks</h2>
+      <div className="bg-[#0A0A0A] border border-[#1A1A1A] overflow-hidden">
+        <div className="p-6 border-b border-[#1A1A1A]">
+          <h2 className="text-sm font-medium text-white">Tasks</h2>
         </div>
         {tasksTotal === 0 ? (
-          <div className="p-12 text-center text-gray-500">No tasks yet</div>
+          <div className="p-12 text-center text-[#4A5568] text-sm">
+            No tasks yet
+          </div>
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-[#1A1A1A]">
             {project.tasks?.map((task: TaskItem) => (
               <div
                 key={task.id}
-                className="p-4 flex items-center justify-between"
+                className="p-4 flex items-center justify-between hover:bg-white/[0.01] transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`h-3 w-3 rounded-full ${task.status === "completed" ? "bg-green-500" : task.status === "in_progress" ? "bg-blue-500" : "bg-gray-300"}`}
+                    className={`h-1.5 w-1.5 rounded-full ${TASK_STATUS_COLORS[task.status] || TASK_STATUS_COLORS.todo}`}
                   />
                   <span
                     className={
                       task.status === "completed"
-                        ? "line-through text-gray-400"
-                        : "text-gray-900"
+                        ? "line-through text-[#3A3A3A]"
+                        : "text-white text-sm"
                     }
                   >
                     {task.title}
                   </span>
                 </div>
-                <span className="text-sm text-gray-500">{task.priority}</span>
+                <span className="text-xs text-[#4A5568] tracking-wide uppercase">
+                  {task.priority}
+                </span>
               </div>
             ))}
           </div>
@@ -202,26 +249,24 @@ export function ProjectDetailPage() {
       </div>
 
       {/* Project Updates */}
-      <div className="bg-white rounded-xl border border-gray-200 mt-6">
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+      <div className="bg-[#0A0A0A] border border-[#1A1A1A] mt-6">
+        <div className="p-6 border-b border-[#1A1A1A] flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Project Updates
-            </h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="text-sm font-medium text-white">Project Updates</h2>
+            <p className="text-xs text-[#4A5568] mt-1">
               Share status updates with your team or clients.
             </p>
           </div>
           <button
             onClick={() => setShowUpdateForm((prev) => !prev)}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-200 hover:bg-gray-50"
+            className="px-4 py-2 text-xs tracking-[0.1em] uppercase border border-[#1A1A1A] text-[#4A5568] hover:text-white hover:border-[#2A2A2A] transition-all duration-300"
           >
             {showUpdateForm ? "Cancel" : "New Update"}
           </button>
         </div>
 
         {showUpdateForm && (
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b border-[#1A1A1A]">
             <form
               onSubmit={(event) => {
                 event.preventDefault();
@@ -234,30 +279,46 @@ export function ProjectDetailPage() {
               }}
               className="space-y-4"
             >
+              {createUpdateMutation.isError && (
+                <div className="p-3 bg-[#9E534F]/10 border border-[#9E534F]/30 text-sm text-[#D4796E]">
+                  {(
+                    createUpdateMutation.error as AxiosError<{
+                      error?: { message?: string };
+                    }>
+                  )?.response?.data?.error?.message ||
+                    "Failed to publish update"}
+                </div>
+              )}
               <div>
-                <label className="text-sm text-gray-600">Title</label>
+                <label className="text-xs font-medium text-[#E1E1E1] tracking-wide uppercase">
+                  Title
+                </label>
                 <input
                   name="title"
                   required
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2"
+                  className="mt-2 w-full px-4 py-2.5 bg-transparent border border-[#1A1A1A] text-white text-sm placeholder:text-[#4A5568] focus:outline-none focus:border-[#A68B5B]/50 transition-colors"
                   placeholder="Weekly progress update"
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-600">Update</label>
+                <label className="text-xs font-medium text-[#E1E1E1] tracking-wide uppercase">
+                  Update
+                </label>
                 <textarea
                   name="body"
                   required
                   rows={4}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2"
+                  className="mt-2 w-full px-4 py-2.5 bg-transparent border border-[#1A1A1A] text-white text-sm placeholder:text-[#4A5568] focus:outline-none focus:border-[#A68B5B]/50 transition-colors resize-none"
                   placeholder="Share the latest milestones, risks, and next steps."
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-600">Audience</label>
+                <label className="text-xs font-medium text-[#E1E1E1] tracking-wide uppercase">
+                  Audience
+                </label>
                 <select
                   name="audience"
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2"
+                  className="mt-2 w-full px-4 py-2.5 bg-[#0A0A0A] border border-[#1A1A1A] text-white text-sm focus:outline-none focus:border-[#A68B5B]/50 transition-colors"
                   defaultValue="internal"
                 >
                   <option value="internal">Internal team</option>
@@ -266,47 +327,50 @@ export function ProjectDetailPage() {
               </div>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                disabled={createUpdateMutation.isPending}
+                className="px-5 py-2.5 bg-[#A68B5B] text-[#0A0A0A] text-xs font-medium tracking-[0.1em] uppercase hover:bg-[#8A7048] disabled:opacity-50 transition-colors duration-300"
               >
-                Publish update
+                {createUpdateMutation.isPending
+                  ? "Publishing..."
+                  : "Publish Update"}
               </button>
             </form>
           </div>
         )}
 
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-[#1A1A1A]">
           {updatesQuery.isLoading ? (
-            <div className="p-6 text-gray-500">Loading updates...</div>
+            <div className="p-6 text-[#4A5568] text-sm">Loading updates...</div>
           ) : updatesQuery.data?.data?.data?.length ? (
             updatesQuery.data.data.data.map((update: UpdateItem) => (
               <div key={update.id} className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-gray-900">
+                    <h3 className="font-medium text-white text-sm">
                       {update.title}
                     </h3>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-[#4A5568] mt-1">
                       {update.author?.name || "Unknown"} ·{" "}
                       {new Date(update.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   <span
-                    className={`text-xs px-2 py-1 rounded-full ${
+                    className={`text-xs px-2.5 py-1 tracking-wide uppercase ${
                       update.audience === "client"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-600"
+                        ? "bg-[#4A9079]/20 text-[#4A9079]"
+                        : "bg-[#4A5568]/20 text-[#4A5568]"
                     }`}
                   >
                     {update.audience === "client" ? "Client" : "Internal"}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mt-3 whitespace-pre-line">
+                <p className="text-sm text-[#E1E1E1] mt-3 whitespace-pre-line">
                   {update.body}
                 </p>
               </div>
             ))
           ) : (
-            <div className="p-6 text-gray-500">
+            <div className="p-6 text-[#4A5568] text-sm">
               No updates have been shared yet.
             </div>
           )}
@@ -326,27 +390,20 @@ function StatCard({
   value: string;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
+    <div className="bg-[#0A0A0A] border border-[#1A1A1A] p-5">
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
-          <Icon className="h-5 w-5 text-gray-600" />
+        <div className="w-10 h-10 border border-[#2A2A2A] flex items-center justify-center text-[#4A5568]">
+          <Icon className="h-5 w-5" strokeWidth={1.5} />
         </div>
         <div>
-          <p className="text-sm text-gray-500">{label}</p>
-          <p className="font-semibold text-gray-900">{value}</p>
+          <p className="text-xs tracking-[0.15em] text-[#4A5568] uppercase">
+            {label}
+          </p>
+          <p className="text-lg font-medium text-white tracking-tight">
+            {value}
+          </p>
         </div>
       </div>
     </div>
   );
-}
-
-function getStatusColor(status: string) {
-  const colors: Record<string, string> = {
-    planning: "bg-gray-100 text-gray-600",
-    active: "bg-blue-100 text-blue-600",
-    on_hold: "bg-amber-100 text-amber-600",
-    completed: "bg-green-100 text-green-600",
-    cancelled: "bg-red-100 text-red-600",
-  };
-  return colors[status] || colors.planning;
 }
