@@ -84,6 +84,9 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^6.21.0
         version: 6.21.0(eslint@8.57.1)(typescript@5.9.3)
+      dotenv-cli:
+        specifier: ^7.4.4
+        version: 7.4.4
       eslint:
         specifier: ^8.57.0
         version: 8.57.1
@@ -215,6 +218,9 @@ importers:
         specifier: ^5.9.0
         version: 5.22.0(prisma@5.22.0)
     devDependencies:
+      dotenv-cli:
+        specifier: ^7.4.4
+        version: 7.4.4
       prisma:
         specifier: ^5.9.0
         version: 5.22.0
