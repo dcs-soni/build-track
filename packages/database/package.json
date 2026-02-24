@@ -8,10 +8,10 @@
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "db:generate": "dotenv -e ../../.env -- prisma generate",
-    "db:push": "dotenv -e ../../.env -- prisma db push",
-    "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
-    "db:studio": "dotenv -e ../../.env -- prisma studio",
+    "db:generate": "pnpm -w exec dotenv -e ../../.env -- prisma generate",
+    "db:push": "pnpm -w exec dotenv -e ../../.env -- prisma db push",
+    "db:migrate": "pnpm -w exec dotenv -e ../../.env -- prisma migrate dev",
+    "db:studio": "pnpm -w exec dotenv -e ../../.env -- prisma studio",
     "clean": "rm -rf dist .turbo node_modules"
   },
   "dependencies": {
