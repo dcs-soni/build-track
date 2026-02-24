@@ -15,6 +15,7 @@ module.exports = {
   env: {
     browser: true,
     es2022: true,
+    node: true,
   },
   rules: {
     "react-refresh/only-export-components": [
