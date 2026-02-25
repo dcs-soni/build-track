@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency } from "@buildtrack/shared";
 import {
@@ -82,13 +82,22 @@ export function BudgetAnalyticsPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="mb-4">
-        <p className="text-xs tracking-[0.2em] text-[#A68B5B] uppercase mb-3">
-          Financial Intelligence
-        </p>
-        <h1 className="text-3xl font-medium text-white tracking-tight">
-          Budget Analytics
-        </h1>
+      <div className="mb-4 flex items-end justify-between">
+        <div>
+          <p className="text-xs tracking-[0.2em] text-[#A68B5B] uppercase mb-3">
+            Financial Intelligence
+          </p>
+          <h1 className="text-3xl font-medium text-white tracking-tight">
+            Budget Analytics
+          </h1>
+        </div>
+        <Link
+          to="/expenses"
+          className="flex items-center gap-2 px-4 py-2 bg-[#A68B5B]/10 text-[#A68B5B] text-xs font-medium tracking-[0.1em] uppercase hover:bg-[#A68B5B]/20 transition-colors border border-[#A68B5B]/20"
+        >
+          <DollarSign className="h-4 w-4" />
+          View Expense Log
+        </Link>
       </div>
 
       {/* Summary Cards */}

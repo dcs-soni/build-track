@@ -54,75 +54,93 @@ export function TeamSettingsPage() {
   };
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="max-w-4xl mx-auto space-y-8 p-6">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Team Settings</h1>
-        <p className="text-gray-500">Manage team members and invitations</p>
+        <p className="text-xs tracking-[0.2em] text-[#A68B5B] uppercase mb-3">
+          Administration
+        </p>
+        <h1 className="text-3xl font-medium text-white tracking-tight">
+          Team Settings
+        </h1>
+        <p className="text-sm text-[#4A5568] mt-1">
+          Manage team members and invitations
+        </p>
       </div>
 
       {/* Invite Section */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+      <div className="bg-[#0A0A0A] border border-[#1A1A1A] p-6 mb-6 leading-relaxed">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-sm font-medium text-white tracking-wide uppercase">
             Pending Invitations
           </h2>
           <button
             onClick={() => setShowInvite(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#A68B5B] text-[#0A0A0A] text-xs font-medium tracking-[0.1em] uppercase hover:bg-[#8A7048] transition-colors duration-300"
           >
-            <UserPlus className="h-5 w-5" />
+            <UserPlus className="h-4 w-4" strokeWidth={1.5} />
             Invite Member
           </button>
         </div>
 
         {isLoading ? (
-          <div className="text-center py-8 text-gray-500">Loading...</div>
+          <div className="flex items-center justify-center py-8">
+            <div className="w-8 h-8 rounded-full border-2 border-[#A68B5B] border-t-transparent animate-spin" />
+          </div>
         ) : invitations.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Mail className="h-10 w-10 mx-auto mb-2 text-gray-300" />
-            <p>No pending invitations</p>
+          <div className="text-center py-12 border border-[#1A1A1A] bg-[#0A0A0A]">
+            <Mail
+              className="h-10 w-10 mx-auto mb-3 text-[#2A2A2A]"
+              strokeWidth={1}
+            />
+            <p className="text-sm text-[#4A5568]">No pending invitations</p>
           </div>
         ) : (
           <div className="space-y-3">
             {invitations.map((inv: InvitationItem) => (
               <div
                 key={inv.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                className="flex items-center justify-between p-4 bg-[#0A0A0A] border border-[#1A1A1A] hover:border-[#2A2A2A] transition-colors duration-300"
               >
                 <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <Mail className="h-5 w-5 text-blue-600" />
+                  <div className="h-10 w-10 border border-[#1A1A1A] bg-[#111111] flex items-center justify-center">
+                    <Mail className="h-4 w-4 text-[#A68B5B]" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{inv.email}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-white text-sm">
+                      {inv.email}
+                    </p>
+                    <p className="text-xs text-[#4A5568] mt-0.5">
                       {roleLabels[inv.role] || inv.role} • Invited by{" "}
-                      {inv.inviter?.name || "Unknown"}
+                      <span className="text-[#E1E1E1]">
+                        {inv.inviter?.name || "Unknown"}
+                      </span>
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 text-sm text-gray-500">
-                    <Clock className="h-4 w-4" />
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1.5 text-xs text-[#4A5568]">
+                    <Clock className="h-3 w-3" />
                     Expires {new Date(inv.expiresAt ?? "").toLocaleDateString()}
                   </span>
-                  <button
-                    onClick={() => resendMutation.mutate(inv.id)}
-                    disabled={resendMutation.isPending}
-                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                    title="Resend invitation"
-                  >
-                    <RefreshCw
-                      className={`h-4 w-4 ${resendMutation.isPending ? "animate-spin" : ""}`}
-                    />
-                  </button>
-                  <button
-                    onClick={() => deleteMutation.mutate(inv.id)}
-                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                    title="Cancel invitation"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-1 border-l border-[#1A1A1A] pl-3 ml-1">
+                    <button
+                      onClick={() => resendMutation.mutate(inv.id)}
+                      disabled={resendMutation.isPending}
+                      className="p-2 text-[#4A5568] hover:text-[#A68B5B] transition-colors disabled:opacity-50"
+                      title="Resend invitation"
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 ${resendMutation.isPending ? "animate-spin" : ""}`}
+                      />
+                    </button>
+                    <button
+                      onClick={() => deleteMutation.mutate(inv.id)}
+                      className="p-2 text-[#4A5568] hover:text-[#9E534F] transition-colors disabled:opacity-50"
+                      title="Cancel invitation"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -131,11 +149,11 @@ export function TeamSettingsPage() {
       </div>
 
       {/* Role Descriptions */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="bg-[#0A0A0A] border border-[#1A1A1A] p-6">
+        <h2 className="text-sm font-medium text-white mb-6 uppercase tracking-wide">
           Role Permissions
         </h2>
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {[
             {
               role: "admin",
@@ -157,12 +175,16 @@ export function TeamSettingsPage() {
           ].map((item) => (
             <div
               key={item.role}
-              className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
+              className="flex items-center gap-4 p-4 border border-[#1A1A1A] bg-[#111111]"
             >
-              <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
-                {roleLabels[item.role]}
-              </span>
-              <p className="text-gray-600 text-sm">{item.desc}</p>
+              <div className="w-32 flex-shrink-0">
+                <span className="inline-block px-2.5 py-1 bg-[#1A1A1A] text-[#A68B5B] text-[10px] tracking-widest uppercase font-medium">
+                  {roleLabels[item.role]}
+                </span>
+              </div>
+              <p className="text-[#888888] text-sm leading-relaxed">
+                {item.desc}
+              </p>
             </div>
           ))}
         </div>
@@ -170,9 +192,9 @@ export function TeamSettingsPage() {
 
       {/* Invite Modal */}
       {showInvite && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-[#0A0A0A] border border-[#1A1A1A] w-full max-w-md p-8 shadow-2xl">
+            <h2 className="text-xl font-medium text-white mb-6">
               Invite Team Member
             </h2>
             <form
@@ -185,9 +207,9 @@ export function TeamSettingsPage() {
                 });
               }}
             >
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs font-medium text-[#4A5568] uppercase tracking-wide mb-2">
                     Email Address *
                   </label>
                   <input
@@ -195,39 +217,57 @@ export function TeamSettingsPage() {
                     type="email"
                     required
                     placeholder="colleague@company.com"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 bg-[#111111] border border-[#2A2A2A] text-white focus:outline-none focus:border-[#A68B5B] transition-colors placeholder-[#4A5568] text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs font-medium text-[#4A5568] uppercase tracking-wide mb-2">
                     Role *
                   </label>
                   <select
                     name="role"
                     required
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 bg-[#111111] border border-[#2A2A2A] text-white focus:outline-none focus:border-[#A68B5B] transition-colors text-sm appearance-none"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234A5568'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 1rem center",
+                      backgroundSize: "1.2rem",
+                    }}
                   >
-                    <option value="">Select role</option>
-                    <option value="admin">Admin</option>
-                    <option value="manager">Manager</option>
-                    <option value="member">Team Member</option>
-                    <option value="viewer">Viewer</option>
-                    <option value="client">Client</option>
+                    <option value="" className="bg-[#111111]">
+                      Select role
+                    </option>
+                    <option value="admin" className="bg-[#111111]">
+                      Admin
+                    </option>
+                    <option value="manager" className="bg-[#111111]">
+                      Manager
+                    </option>
+                    <option value="member" className="bg-[#111111]">
+                      Team Member
+                    </option>
+                    <option value="viewer" className="bg-[#111111]">
+                      Viewer
+                    </option>
+                    <option value="client" className="bg-[#111111]">
+                      Client
+                    </option>
                   </select>
                 </div>
               </div>
-              <div className="flex gap-3 mt-6">
+              <div className="flex gap-4 mt-8">
                 <button
                   type="button"
                   onClick={() => setShowInvite(false)}
-                  className="flex-1 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="flex-1 py-2.5 border border-[#2A2A2A] text-[#E1E1E1] text-xs font-medium tracking-[0.1em] uppercase hover:bg-[#1A1A1A] transition-colors duration-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={createMutation.isPending}
-                  className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="flex-1 py-2.5 bg-[#A68B5B] text-[#0A0A0A] text-xs font-medium tracking-[0.1em] uppercase hover:bg-[#8A7048] transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {createMutation.isPending ? "Sending..." : "Send Invitation"}
                 </button>

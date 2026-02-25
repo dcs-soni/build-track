@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Search, Filter, ArrowUpRight, FolderKanban } from "lucide-react";
 import { projectsApi } from "@/lib/api";
 import type { AxiosError } from "axios";
@@ -46,9 +46,20 @@ function getStatusStyle(status: string) {
 }
 
 export function ProjectsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState(
+    searchParams.get("create") === "true",
+  );
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (searchParams.get("create") === "true") {
+      setShowCreate(true);
+      searchParams.delete("create");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["projects", search],

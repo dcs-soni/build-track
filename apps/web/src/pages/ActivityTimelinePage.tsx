@@ -22,12 +22,12 @@ const actionIcons: Record<string, LucideIcon> = {
 };
 
 const actionColors: Record<string, string> = {
-  created: "bg-green-100 text-green-600",
-  updated: "bg-blue-100 text-blue-600",
-  deleted: "bg-red-100 text-red-600",
-  completed: "bg-green-100 text-green-600",
-  approved: "bg-green-100 text-green-600",
-  rejected: "bg-red-100 text-red-600",
+  created: "bg-[#4A9079]/20 text-[#4A9079]",
+  updated: "bg-[#6B8EC4]/20 text-[#6B8EC4]",
+  deleted: "bg-[#9E534F]/20 text-[#D4796E]",
+  completed: "bg-[#4A9079]/20 text-[#4A9079]",
+  approved: "bg-[#4A9079]/20 text-[#4A9079]",
+  rejected: "bg-[#9E534F]/20 text-[#D4796E]",
 };
 
 export function ActivityTimelinePage() {
@@ -68,32 +68,41 @@ export function ActivityTimelinePage() {
   });
 
   return (
-    <div className="p-6">
+    <div className="max-w-7xl mx-auto space-y-8 p-6">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <Activity className="h-6 w-6 text-blue-600" />
+        <p className="text-xs tracking-[0.2em] text-[#A68B5B] uppercase mb-3">
+          Project History
+        </p>
+        <h1 className="text-3xl font-medium text-white tracking-tight flex items-center gap-3">
+          <Activity className="h-6 w-6 text-[#A68B5B]" />
           Activity Timeline
-        </h2>
-        <p className="text-gray-500">Track all changes and updates</p>
+        </h1>
+        <p className="text-sm text-[#4A5568] mt-1">
+          Track all changes and updates
+        </p>
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12">Loading...</div>
+        <div className="flex items-center justify-center py-12">
+          <div className="w-8 h-8 rounded-full border-2 border-[#A68B5B] border-t-transparent animate-spin" />
+        </div>
       ) : activities.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-          <Activity className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="font-medium text-gray-900">No activity yet</h3>
-          <p className="text-gray-500">Changes to projects will appear here.</p>
+        <div className="text-center py-12 bg-[#0A0A0A] border border-[#1A1A1A]">
+          <Activity className="h-12 w-12 text-[#2A2A2A] mx-auto mb-4" />
+          <h3 className="font-medium text-white mb-2">No activity yet</h3>
+          <p className="text-sm text-[#4A5568]">
+            Changes to projects will appear here.
+          </p>
         </div>
       ) : (
         <div className="relative">
           {/* Timeline line */}
-          <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200" />
+          <div className="absolute left-6 top-4 bottom-0 w-px bg-[#1A1A1A]" />
 
           <div className="space-y-8">
             {Object.entries(groupedActivities).map(([date, dateActivities]) => (
               <div key={date}>
-                <h3 className="text-sm font-medium text-gray-500 mb-4 ml-14">
+                <h3 className="text-sm font-medium text-[#A68B5B] mb-4 ml-14 tracking-wide uppercase">
                   {date}
                 </h3>
                 <div className="space-y-4">
@@ -101,7 +110,7 @@ export function ActivityTimelinePage() {
                     const ActionIcon = actionIcons[activity.action] || Edit;
                     const colorClass =
                       actionColors[activity.action] ||
-                      "bg-gray-100 text-gray-600";
+                      "bg-[#2A2A2A] text-[#E1E1E1]";
                     const changes = activity.changes as Record<
                       string,
                       { old?: unknown; new?: unknown }
@@ -111,25 +120,27 @@ export function ActivityTimelinePage() {
                     return (
                       <div key={activity.id} className="flex gap-4">
                         <div
-                          className={`relative z-10 h-10 w-10 rounded-full ${colorClass} flex items-center justify-center flex-shrink-0`}
+                          className={`relative z-10 h-10 w-10 border border-[#1A1A1A] bg-[#0A0A0A] flex items-center justify-center flex-shrink-0 mt-1`}
                         >
-                          <ActionIcon className="h-5 w-5" />
+                          <div className={`p-1.5 ${colorClass}`}>
+                            <ActionIcon className="h-4 w-4" strokeWidth={1.5} />
+                          </div>
                         </div>
-                        <div className="flex-1 bg-white rounded-xl border border-gray-200 p-4">
+                        <div className="flex-1 bg-[#0A0A0A] border border-[#1A1A1A] p-5 hover:border-[#2A2A2A] transition-colors duration-300">
                           <div className="flex items-start justify-between">
                             <div>
-                              <p className="text-gray-900">
-                                <span className="font-medium">
+                              <p className="text-[#E1E1E1] text-sm">
+                                <span className="font-medium text-white">
                                   {activity.user?.name || "Unknown"}
                                 </span>{" "}
-                                <span className="text-gray-500">
+                                <span className="text-[#4A5568]">
                                   {activity.action}
                                 </span>{" "}
                                 <span className="font-medium">
                                   {activity.entityType}
                                 </span>
                                 {activity.entityName && (
-                                  <span className="text-gray-700">
+                                  <span className="text-[#A68B5B]">
                                     {" "}
                                     "{activity.entityName}"
                                   </span>
@@ -138,14 +149,14 @@ export function ActivityTimelinePage() {
                               {activity.project && !projectId && (
                                 <Link
                                   to={`/projects/${activity.project.id}`}
-                                  className="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1"
+                                  className="text-xs text-[#6B8EC4] hover:text-[#4A9079] transition-colors flex items-center gap-1 mt-2 uppercase tracking-wide"
                                 >
                                   {activity.project.name}{" "}
                                   <ArrowRight className="h-3 w-3" />
                                 </Link>
                               )}
                             </div>
-                            <span className="text-xs text-gray-500 whitespace-nowrap">
+                            <span className="text-xs text-[#4A5568] whitespace-nowrap tabular-nums">
                               {new Date(activity.createdAt).toLocaleTimeString(
                                 "en-US",
                                 { hour: "numeric", minute: "2-digit" },
@@ -155,28 +166,30 @@ export function ActivityTimelinePage() {
 
                           {/* Show changes if available */}
                           {changedFields.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
+                            <div className="mt-4 pt-4 border-t border-[#1A1A1A] space-y-2">
                               {changedFields.slice(0, 3).map((field) => (
                                 <div
                                   key={field}
-                                  className="text-sm text-gray-600 flex items-center gap-2"
+                                  className="text-sm text-[#A68B5B] flex items-center gap-3"
                                 >
-                                  <span className="font-medium">{field}:</span>
+                                  <span className="font-medium tracking-wide uppercase text-xs">
+                                    {field}:
+                                  </span>
                                   {changes[field].old !== undefined && (
                                     <>
-                                      <span className="text-red-500 line-through">
+                                      <span className="text-[#9E534F] line-through decoration-[#9E534F]/50">
                                         {String(changes[field].old)}
                                       </span>
-                                      <ArrowRight className="h-3 w-3 text-gray-400" />
+                                      <ArrowRight className="h-3 w-3 text-[#4A5568]" />
                                     </>
                                   )}
-                                  <span className="text-green-600">
+                                  <span className="text-[#4A9079]">
                                     {String(changes[field].new)}
                                   </span>
                                 </div>
                               ))}
                               {changedFields.length > 3 && (
-                                <p className="text-xs text-gray-400">
+                                <p className="text-xs text-[#4A5568] tracking-wide uppercase mt-2">
                                   +{changedFields.length - 3} more changes
                                 </p>
                               )}
