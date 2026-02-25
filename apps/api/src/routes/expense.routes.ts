@@ -1,5 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import {
+  idParamSchema,
+  projectIdParamSchema,
+} from "../schemas/common.schema.js";
 
 const createExpenseSchema = z.object({
   projectId: z.string().uuid(),
@@ -33,7 +37,7 @@ const updateExpenseSchema = z.object({
 export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
   // List expenses for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const {
       category,
@@ -162,7 +166,7 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update expense
   fastify.patch("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const body = updateExpenseSchema.parse(request.body);
 
@@ -195,7 +199,7 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete expense
   fastify.delete("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const existing = await fastify.prisma.expense.findFirst({
@@ -224,7 +228,7 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Approve/Reject expense
   fastify.post("/:id/approve", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
 
@@ -248,7 +252,7 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post("/:id/reject", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const expense = await fastify.prisma.expense.updateMany({

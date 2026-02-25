@@ -1,5 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import {
+  idParamSchema,
+  projectIdParamSchema,
+} from "../schemas/common.schema.js";
 
 const createReportSchema = z.object({
   projectId: z.string().uuid(),
@@ -24,7 +28,7 @@ const updateReportSchema = createReportSchema
 export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
   // List reports for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const {
       startDate,
@@ -104,7 +108,7 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get single report
   fastify.get("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const report = await fastify.prisma.dailyReport.findFirst({
@@ -181,7 +185,7 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update daily report
   fastify.patch("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const body = updateReportSchema.parse(request.body);
 
@@ -205,7 +209,7 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Sign off report
   fastify.post("/:id/sign-off", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
 
@@ -252,7 +256,7 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete report
   fastify.delete("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const result = await fastify.prisma.dailyReport.deleteMany({
@@ -271,7 +275,7 @@ export const dailyReportRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get report calendar (dates with reports)
   fastify.get("/projects/:projectId/calendar", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const { year, month } = request.query as { year?: string; month?: string };
 

@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
+import { idParamSchema } from "../schemas/common.schema.js";
 import crypto, { createHash } from "crypto";
 import { requireRole } from "../plugins/authorize.plugin.js";
 
@@ -273,7 +274,7 @@ export const invitationRoutes: FastifyPluginAsync = async (fastify) => {
     "/:id",
     { preHandler: [authHook, requireRole("admin", "manager", "owner")] },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      const { id } = idParamSchema.parse(request.params);
       const tenantId = request.tenantId;
 
       const result = await fastify.prisma.invitation.deleteMany({
@@ -299,7 +300,7 @@ export const invitationRoutes: FastifyPluginAsync = async (fastify) => {
     "/:id/resend",
     { preHandler: [authHook, requireRole("admin", "manager", "owner")] },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      const { id } = idParamSchema.parse(request.params);
       const tenantId = request.tenantId;
 
       const invitation = await fastify.prisma.invitation.findFirst({

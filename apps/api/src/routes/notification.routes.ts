@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { idParamSchema } from "../schemas/common.schema.js";
 import { ensureNotificationPreference } from "../utils/notifications.js";
 
 const listQuerySchema = z.object({
@@ -20,7 +21,6 @@ const preferenceSchema = z.object({
 });
 
 export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
-
   fastify.get("/", async (request, reply) => {
     const tenantId = request.tenantId;
     const userId = request.userId;
@@ -82,7 +82,7 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post("/:id/read", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
     if (!tenantId || !userId) {

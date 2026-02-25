@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { projectIdParamSchema } from "../schemas/common.schema.js";
 import { notifyUsers } from "../utils/notifications.js";
 
 const createUpdateSchema = z.object({
@@ -16,9 +17,8 @@ const listQuerySchema = z.object({
 const allowedRoles = new Set(["owner", "admin", "manager"]);
 
 export const projectUpdateRoutes: FastifyPluginAsync = async (fastify) => {
-
   fastify.get("/projects/:projectId/updates", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     if (!tenantId) {
@@ -59,7 +59,7 @@ export const projectUpdateRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post("/projects/:projectId/updates", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
 

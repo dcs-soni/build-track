@@ -1,5 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import {
+  idParamSchema,
+  projectIdParamSchema,
+} from "../schemas/common.schema.js";
 
 const uploadPhotoSchema = z.object({
   projectId: z.string().uuid(),
@@ -38,10 +42,9 @@ const updatePhotoSchema = z.object({
 });
 
 export const photoRoutes: FastifyPluginAsync = async (fastify) => {
-
   // List photos for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const {
       category,
@@ -91,7 +94,7 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get photos grouped by date
   fastify.get("/projects/:projectId/by-date", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const photos = await fastify.prisma.photo.findMany({
@@ -127,7 +130,7 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get single photo
   fastify.get("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const photo = await fastify.prisma.photo.findFirst({
@@ -140,12 +143,10 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!photo) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Photo not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Photo not found" },
+      });
     }
 
     return reply.send({ success: true, data: photo });
@@ -157,12 +158,10 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.userId;
 
     if (!tenantId) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: { code: "NO_TENANT", message: "Tenant context required" },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: { code: "NO_TENANT", message: "Tenant context required" },
+      });
     }
 
     const body = uploadPhotoSchema.parse(request.body);
@@ -172,12 +171,10 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id: body.projectId, tenantId },
     });
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Project not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Project not found" },
+      });
     }
 
     const photo = await fastify.prisma.photo.create({
@@ -198,12 +195,10 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.userId;
 
     if (!tenantId) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: { code: "NO_TENANT", message: "Tenant context required" },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: { code: "NO_TENANT", message: "Tenant context required" },
+      });
     }
 
     const { projectId, photos } = request.body as {
@@ -212,21 +207,17 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
     };
 
     if (!Array.isArray(photos) || photos.length === 0) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: { code: "INVALID_INPUT", message: "Photos array required" },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Photos array required" },
+      });
     }
 
     if (photos.length > 50) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: { code: "TOO_MANY", message: "Maximum 50 photos per request" },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: { code: "TOO_MANY", message: "Maximum 50 photos per request" },
+      });
     }
 
     // Verify project access
@@ -234,12 +225,10 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id: projectId, tenantId },
     });
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Project not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Project not found" },
+      });
     }
 
     const created = await fastify.prisma.photo.createMany({
@@ -261,7 +250,7 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update photo
   fastify.patch("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const body = updatePhotoSchema.parse(request.body);
 
@@ -271,12 +260,10 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Photo not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Photo not found" },
+      });
     }
 
     const updated = await fastify.prisma.photo.findFirst({ where: { id } });
@@ -285,7 +272,7 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete photo
   fastify.delete("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const result = await fastify.prisma.photo.deleteMany({
@@ -293,12 +280,10 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Photo not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Photo not found" },
+      });
     }
 
     return reply.status(204).send();
@@ -306,7 +291,7 @@ export const photoRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get photo statistics
   fastify.get("/projects/:projectId/stats", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const [total, byCategory] = await Promise.all([
