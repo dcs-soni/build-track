@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LoadingSpinner } from "@/components/ui";
 
 // Lazy-loaded pages — each is split into its own chunk
 const LandingPage = lazy(() =>
@@ -30,6 +31,11 @@ const BudgetAnalyticsPage = lazy(() =>
     default: m.BudgetAnalyticsPage,
   })),
 );
+const AnalyticsPage = lazy(() =>
+  import("@/pages/AnalyticsPage").then((m) => ({
+    default: m.AnalyticsPage,
+  })),
+);
 const SubcontractorsPage = lazy(() =>
   import("@/pages/SubcontractorsPage").then((m) => ({
     default: m.SubcontractorsPage,
@@ -46,6 +52,36 @@ const PermitsPage = lazy(() =>
 const PhotoGalleryPage = lazy(() =>
   import("@/pages/PhotoGalleryPage").then((m) => ({
     default: m.PhotoGalleryPage,
+  })),
+);
+const RFIPage = lazy(() =>
+  import("@/pages/RFIPage").then((m) => ({
+    default: m.RFIPage,
+  })),
+);
+const RFIDetailPage = lazy(() =>
+  import("@/pages/RFIDetailPage").then((m) => ({
+    default: m.RFIDetailPage,
+  })),
+);
+const EquipmentPage = lazy(() =>
+  import("@/pages/EquipmentPage").then((m) => ({
+    default: m.EquipmentPage,
+  })),
+);
+const EquipmentDetailPage = lazy(() =>
+  import("@/pages/EquipmentDetailPage").then((m) => ({
+    default: m.EquipmentDetailPage,
+  })),
+);
+const ExpensesPage = lazy(() =>
+  import("@/pages/ExpensesPage").then((m) => ({
+    default: m.ExpensesPage,
+  })),
+);
+const DocumentsPage = lazy(() =>
+  import("@/pages/DocumentsPage").then((m) => ({
+    default: m.DocumentsPage,
   })),
 );
 const ActivityTimelinePage = lazy(() =>
@@ -68,14 +104,6 @@ const NotificationsPage = lazy(() =>
     default: m.NotificationsPage,
   })),
 );
-
-function LoadingSpinner() {
-  return (
-    <div className="flex h-screen items-center justify-center bg-[var(--ivory)]">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--teal)] border-t-transparent" />
-    </div>
-  );
-}
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -124,6 +152,12 @@ export default function App() {
             {/* Subcontractor Management */}
             <Route path="/subcontractors" element={<SubcontractorsPage />} />
 
+            {/* Top-level Analytics */}
+            <Route path="/budget-analytics" element={<AnalyticsPage />} />
+
+            {/* Top-level Daily Reports (shows all, no project scope) */}
+            <Route path="/daily-reports" element={<DailyReportsPage />} />
+
             {/* Permit Tracker */}
             <Route
               path="/projects/:projectId/permits"
@@ -135,6 +169,23 @@ export default function App() {
               path="/projects/:projectId/photos"
               element={<PhotoGalleryPage />}
             />
+
+            {/* Request for Information */}
+            <Route path="/projects/:projectId/rfis" element={<RFIPage />} />
+            <Route
+              path="/projects/:projectId/rfis/:rfiId"
+              element={<RFIDetailPage />}
+            />
+
+            {/* Equipment & Assets */}
+            <Route path="/equipment" element={<EquipmentPage />} />
+            <Route path="/equipment/:id" element={<EquipmentDetailPage />} />
+
+            {/* Expenses & Financials */}
+            <Route path="/expenses" element={<ExpensesPage />} />
+
+            {/* Document Management */}
+            <Route path="/documents" element={<DocumentsPage />} />
 
             {/* Activity Timeline */}
             <Route path="/activity" element={<ActivityTimelinePage />} />

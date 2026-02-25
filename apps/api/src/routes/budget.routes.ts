@@ -1,5 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import {
+  idParamSchema,
+  projectIdParamSchema,
+} from "../schemas/common.schema.js";
 
 const createBudgetItemSchema = z.object({
   projectId: z.string().uuid(),
@@ -30,10 +34,9 @@ const updateBudgetItemSchema = z.object({
 });
 
 export const budgetRoutes: FastifyPluginAsync = async (fastify) => {
-
   // Get budget analytics for a project
   fastify.get("/projects/:projectId/analytics", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     // Verify project access
@@ -43,12 +46,10 @@ export const budgetRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Project not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Project not found" },
+      });
     }
 
     const budgetItems = project.budgetItems;
@@ -151,7 +152,7 @@ export const budgetRoutes: FastifyPluginAsync = async (fastify) => {
 
   // List budget items for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const { category, status } = request.query as Record<string, string>;
 
@@ -172,12 +173,10 @@ export const budgetRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post("/", async (request, reply) => {
     const tenantId = request.tenantId;
     if (!tenantId) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: { code: "NO_TENANT", message: "Tenant context required" },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: { code: "NO_TENANT", message: "Tenant context required" },
+      });
     }
 
     const body = createBudgetItemSchema.parse(request.body);
@@ -188,12 +187,10 @@ export const budgetRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Project not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Project not found" },
+      });
     }
 
     const budgetItem = await fastify.prisma.budgetItem.create({
@@ -209,7 +206,7 @@ export const budgetRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update budget item
   fastify.patch("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const body = updateBudgetItemSchema.parse(request.body);
 
@@ -222,12 +219,10 @@ export const budgetRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Budget item not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Budget item not found" },
+      });
     }
 
     const updated = await fastify.prisma.budgetItem.findFirst({
@@ -238,7 +233,7 @@ export const budgetRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete budget item
   fastify.delete("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const result = await fastify.prisma.budgetItem.deleteMany({
@@ -246,12 +241,10 @@ export const budgetRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Budget item not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Budget item not found" },
+      });
     }
 
     return reply.status(204).send();

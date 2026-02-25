@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
@@ -23,6 +24,8 @@ import { rfiRoutes } from "./routes/rfi.routes.js";
 import { equipmentRoutes } from "./routes/equipment.routes.js";
 import { notificationRoutes } from "./routes/notification.routes.js";
 import { projectUpdateRoutes } from "./routes/project-updates.routes.js";
+import { analyticsRoutes } from "./routes/analytics.routes.js";
+import { documentRoutes } from "./routes/document.routes.js";
 import { tenantPlugin } from "./plugins/tenant.plugin.js";
 import { errorHandler } from "./plugins/error.plugin.js";
 import { authGuardPlugin } from "./plugins/auth-guard.plugin.js";
@@ -37,6 +40,7 @@ export async function buildApp() {
   const app = Fastify({
     logger:
       envToLogger[process.env.NODE_ENV as keyof typeof envToLogger] ?? true,
+    genReqId: () => crypto.randomUUID(),
   });
 
   // Register plugins
@@ -127,6 +131,12 @@ export async function buildApp() {
         prefix: "/notifications",
       });
       await instance.register(projectUpdateRoutes);
+
+      // Analytics
+      await instance.register(analyticsRoutes, { prefix: "/analytics" });
+
+      // Documents
+      await instance.register(documentRoutes, { prefix: "/documents" });
     },
     { prefix: "/api/v1" },
   );

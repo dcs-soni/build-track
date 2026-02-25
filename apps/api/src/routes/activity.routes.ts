@@ -1,9 +1,16 @@
 import type { FastifyPluginAsync } from "fastify";
+import { z } from "zod";
+import { projectIdParamSchema } from "../schemas/common.schema.js";
+
+const entityParamSchema = z.object({
+  entityType: z.string().min(1),
+  entityId: z.string().uuid("Invalid entity ID"),
+});
 
 export const activityRoutes: FastifyPluginAsync = async (fastify) => {
   // Get activity for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const {
       entityType,
@@ -82,10 +89,7 @@ export const activityRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get activity for specific entity
   fastify.get("/entity/:entityType/:entityId", async (request, reply) => {
-    const { entityType, entityId } = request.params as {
-      entityType: string;
-      entityId: string;
-    };
+    const { entityType, entityId } = entityParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const activities = await fastify.prisma.activityLog.findMany({

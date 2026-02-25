@@ -13,6 +13,7 @@
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { idParamSchema } from "../schemas/common.schema.js";
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -208,7 +209,7 @@ export const equipmentRoutes: FastifyPluginAsync = async (fastify) => {
   // GET SINGLE EQUIPMENT
   // ---------------------------------------------------------------------------
   fastify.get("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const equipment = await fastify.prisma.equipment.findFirst({
@@ -331,7 +332,7 @@ export const equipmentRoutes: FastifyPluginAsync = async (fastify) => {
   // UPDATE EQUIPMENT
   // ---------------------------------------------------------------------------
   fastify.patch("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
     const body = updateEquipmentSchema.parse(request.body);
@@ -379,7 +380,7 @@ export const equipmentRoutes: FastifyPluginAsync = async (fastify) => {
   // DELETE EQUIPMENT
   // ---------------------------------------------------------------------------
   fastify.delete("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const equipment = await fastify.prisma.equipment.findFirst({
@@ -406,7 +407,7 @@ export const equipmentRoutes: FastifyPluginAsync = async (fastify) => {
   // CHECK OUT EQUIPMENT
   // ---------------------------------------------------------------------------
   fastify.post("/:id/checkout", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
     const body = checkoutEquipmentSchema.parse(request.body);
@@ -488,7 +489,7 @@ export const equipmentRoutes: FastifyPluginAsync = async (fastify) => {
   // CHECK IN EQUIPMENT
   // ---------------------------------------------------------------------------
   fastify.post("/:id/checkin", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
     const body = checkinEquipmentSchema.parse(request.body);
@@ -578,7 +579,7 @@ export const equipmentRoutes: FastifyPluginAsync = async (fastify) => {
   // GET EQUIPMENT ASSIGNMENT HISTORY
   // ---------------------------------------------------------------------------
   fastify.get("/:id/history", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const equipment = await fastify.prisma.equipment.findFirst({
@@ -674,7 +675,7 @@ export const equipmentRoutes: FastifyPluginAsync = async (fastify) => {
   // UPDATE MAINTENANCE RECORD
   // ---------------------------------------------------------------------------
   fastify.patch("/maintenance/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
     const body = updateMaintenanceSchema.parse(request.body);

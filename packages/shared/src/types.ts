@@ -262,6 +262,186 @@ export interface ProjectUpdate {
   updatedAt: Date;
 }
 
+// RFI Types
+export type RfiStatus =
+  | "draft"
+  | "open"
+  | "under_review"
+  | "answered"
+  | "closed"
+  | "void";
+export type RfiPriority = "low" | "normal" | "high" | "urgent";
+export type BallInCourt =
+  | "contractor"
+  | "architect"
+  | "engineer"
+  | "owner"
+  | "consultant";
+
+export interface RFI {
+  id: string;
+  tenantId: string;
+  projectId: string;
+  rfiNumber: string;
+  subject: string;
+  question: string;
+  suggestedAnswer?: string | null;
+  drawingRef?: string | null;
+  specSection?: string | null;
+  location?: string | null;
+  status: RfiStatus;
+  priority: RfiPriority;
+  assignedToId?: string | null;
+  ballInCourt: BallInCourt;
+  dateSubmitted?: Date | null;
+  dateRequired: Date;
+  dateAnswered?: Date | null;
+  dateClosed?: Date | null;
+  costImpact: boolean;
+  scheduleImpact: boolean;
+  costAmount?: number | null;
+  scheduleDays?: number | null;
+  impactNotes?: string | null;
+  officialAnswer?: string | null;
+  answeredById?: string | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations that will be returned by API
+  assignedTo?: { id: string; name: string; email: string } | null;
+  creator?: { id: string; name: string } | null;
+  _count?: { responses: number; attachments: number };
+  daysUntilDue?: number;
+  isOverdue?: boolean;
+}
+
+// Equipment Types
+export type EquipmentCategory =
+  | "tool"
+  | "vehicle"
+  | "heavy_equipment"
+  | "safety"
+  | "electronics"
+  | "other";
+export type EquipmentStatus =
+  | "available"
+  | "checked_out"
+  | "maintenance"
+  | "retired"
+  | "lost";
+export type EquipmentCondition =
+  | "excellent"
+  | "good"
+  | "fair"
+  | "poor"
+  | "needs_repair";
+
+export interface Equipment {
+  id: string;
+  tenantId: string;
+  assetTag: string;
+  name: string;
+  category: EquipmentCategory;
+  model?: string | null;
+  serialNumber?: string | null;
+  status: EquipmentStatus;
+  condition: EquipmentCondition;
+  currentProjectId?: string | null;
+  maintenanceIntervalDays?: number | null;
+  nextMaintenanceDate?: Date | null;
+  lastMaintenanceDate?: Date | null;
+  imageUrl?: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  currentProject?: { id: string; name: string } | null;
+  totalAssignments?: number;
+  totalMaintenanceRecords?: number;
+  maintenanceDue?: boolean;
+}
+
+export interface EquipmentAssignment {
+  id: string;
+  tenantId: string;
+  equipmentId: string;
+  projectId?: string | null;
+  assignedToId: string;
+  assignedById: string;
+  purpose?: string | null;
+  checkedOutAt: Date;
+  expectedReturnAt?: Date | null;
+  checkedInAt?: Date | null;
+  checkedInById?: string | null;
+  conditionOut: EquipmentCondition;
+  conditionIn?: EquipmentCondition | null;
+
+  // Relations
+  assignedTo?: { id: string; name: string } | null;
+  assignedBy?: { id: string; name: string } | null;
+  checkedInBy?: { id: string; name: string } | null;
+  project?: { id: string; name: string } | null;
+}
+
+// Expense Types
+export type ExpenseStatus = "pending" | "approved" | "rejected";
+
+export interface Expense {
+  id: string;
+  tenantId: string;
+  projectId: string;
+  budgetItemId?: string | null;
+  amount: number;
+  currency: string;
+  vendor?: string | null;
+  description: string;
+  category: BudgetCategory;
+  receiptUrl?: string | null;
+  expenseDate: Date;
+  status: ExpenseStatus;
+  approvedBy?: string | null;
+  approvedAt?: Date | null;
+  createdBy?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  project?: { id: string; name: string } | null;
+  budgetItem?: { id: string; description: string; category: string } | null;
+  creator?: { id: string; name: string } | null;
+}
+
+// Document Types
+export type DocumentFolderType =
+  | "folder"
+  | "file"
+  | "blueprint"
+  | "contract"
+  | "invoice"
+  | "other";
+
+export interface ProjectDocument {
+  id: string;
+  tenantId: string;
+  projectId?: string | null;
+  folderId?: string | null;
+  name: string;
+  type: DocumentFolderType;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+  storagePath?: string | null;
+  version: number;
+  tags: string[];
+  createdBy?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+
+  uploader?: { id: string; name: string } | null;
+  project?: { id: string; name: string } | null;
+}
+
 // API Response Types
 export interface ApiResponse<T> {
   success: boolean;

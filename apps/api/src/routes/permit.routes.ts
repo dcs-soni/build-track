@@ -1,5 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import {
+  idParamSchema,
+  projectIdParamSchema,
+} from "../schemas/common.schema.js";
 
 const createPermitSchema = z.object({
   projectId: z.string().uuid(),
@@ -33,10 +37,9 @@ const updatePermitSchema = createPermitSchema
   });
 
 export const permitRoutes: FastifyPluginAsync = async (fastify) => {
-
   // List permits for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const { status } = request.query as Record<string, string>;
 
@@ -70,7 +73,7 @@ export const permitRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get single permit
   fastify.get("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const permit = await fastify.prisma.permit.findFirst({
@@ -79,12 +82,10 @@ export const permitRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!permit) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Permit not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Permit not found" },
+      });
     }
 
     return reply.send({ success: true, data: permit });
@@ -95,12 +96,10 @@ export const permitRoutes: FastifyPluginAsync = async (fastify) => {
     const tenantId = request.tenantId;
 
     if (!tenantId) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: { code: "NO_TENANT", message: "Tenant context required" },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: { code: "NO_TENANT", message: "Tenant context required" },
+      });
     }
 
     const body = createPermitSchema.parse(request.body);
@@ -110,12 +109,10 @@ export const permitRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id: body.projectId, tenantId },
     });
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Project not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Project not found" },
+      });
     }
 
     const permit = await fastify.prisma.permit.create({
@@ -132,7 +129,7 @@ export const permitRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update permit
   fastify.patch("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const body = updatePermitSchema.parse(request.body);
 
@@ -154,12 +151,10 @@ export const permitRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Permit not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Permit not found" },
+      });
     }
 
     const updated = await fastify.prisma.permit.findFirst({ where: { id } });
@@ -168,7 +163,7 @@ export const permitRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Quick status updates
   fastify.post("/:id/submit", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const result = await fastify.prisma.permit.updateMany({
@@ -177,15 +172,13 @@ export const permitRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: {
-            code: "INVALID_STATE",
-            message: "Permit not found or not in pending status",
-          },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "INVALID_STATE",
+          message: "Permit not found or not in pending status",
+        },
+      });
     }
 
     const updated = await fastify.prisma.permit.findFirst({ where: { id } });
@@ -193,7 +186,7 @@ export const permitRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post("/:id/approve", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const { permitNumber, expiresAt } = request.body as {
       permitNumber?: string;
@@ -211,15 +204,13 @@ export const permitRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: {
-            code: "INVALID_STATE",
-            message: "Permit not found or not in valid status for approval",
-          },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "INVALID_STATE",
+          message: "Permit not found or not in valid status for approval",
+        },
+      });
     }
 
     const updated = await fastify.prisma.permit.findFirst({ where: { id } });
@@ -228,7 +219,7 @@ export const permitRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete permit
   fastify.delete("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const result = await fastify.prisma.permit.deleteMany({
@@ -236,12 +227,10 @@ export const permitRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Permit not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Permit not found" },
+      });
     }
 
     return reply.status(204).send();

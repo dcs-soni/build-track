@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { idParamSchema } from "../schemas/common.schema.js";
 import { notifyUsers } from "../utils/notifications.js";
 
 const createTaskSchema = z.object({
@@ -27,7 +28,6 @@ const updateTaskSchema = z.object({
 });
 
 export const taskRoutes: FastifyPluginAsync = async (fastify) => {
-
   // Create task
   fastify.post("/", async (request, reply) => {
     const tenantId = request.tenantId;
@@ -80,7 +80,7 @@ export const taskRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update task
   fastify.patch("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
 
@@ -132,7 +132,7 @@ export const taskRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete task
   fastify.delete("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const result = await fastify.prisma.task.deleteMany({
@@ -151,7 +151,7 @@ export const taskRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Complete task
   fastify.post("/:id/complete", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const result = await fastify.prisma.task.updateMany({

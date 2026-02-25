@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { idParamSchema } from "../schemas/common.schema.js";
 
 const createSubcontractorSchema = z.object({
   companyName: z.string().min(1),
@@ -107,7 +108,7 @@ export const subcontractorRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get single subcontractor with project history
   fastify.get("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const subcontractor = await fastify.prisma.subcontractor.findFirst({
@@ -176,7 +177,7 @@ export const subcontractorRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update subcontractor
   fastify.patch("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const body = updateSubcontractorSchema.parse(request.body);
 
@@ -208,7 +209,7 @@ export const subcontractorRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete subcontractor
   fastify.delete("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const result = await fastify.prisma.subcontractor.deleteMany({

@@ -12,6 +12,10 @@
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import {
+  idParamSchema,
+  projectIdParamSchema,
+} from "../schemas/common.schema.js";
 import { notifyUsers } from "../utils/notifications.js";
 
 // =============================================================================
@@ -115,7 +119,7 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
   // LIST RFIs FOR A PROJECT
   // ---------------------------------------------------------------------------
   fastify.get("/projects/:projectId", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const query = request.query as Record<string, string>;
 
@@ -161,7 +165,7 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
   // GET SINGLE RFI WITH FULL DETAILS
   // ---------------------------------------------------------------------------
   fastify.get("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const rfi = await fastify.prisma.rFI.findFirst({
@@ -308,7 +312,7 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
   // UPDATE RFI
   // ---------------------------------------------------------------------------
   fastify.patch("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
     const body = updateRFISchema.parse(request.body);
@@ -393,7 +397,7 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
   // SUBMIT RFI (Draft -> Open)
   // ---------------------------------------------------------------------------
   fastify.post("/:id/submit", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
 
@@ -448,7 +452,7 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
   // ADD RESPONSE TO RFI
   // ---------------------------------------------------------------------------
   fastify.post("/:id/respond", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
     const body = respondToRFISchema.parse(request.body);
@@ -540,7 +544,7 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
   // CLOSE RFI
   // ---------------------------------------------------------------------------
   fastify.post("/:id/close", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
     const body = closeRFISchema.parse(request.body);
@@ -595,7 +599,7 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
   // VOID RFI
   // ---------------------------------------------------------------------------
   fastify.post("/:id/void", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const userId = request.userId;
 
@@ -645,7 +649,7 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
   // DELETE RFI (Draft only)
   // ---------------------------------------------------------------------------
   fastify.delete("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const rfi = await fastify.prisma.rFI.findFirst({
@@ -742,7 +746,7 @@ export const rfiRoutes: FastifyPluginAsync = async (fastify) => {
   // RFI STATISTICS / LOG
   // ---------------------------------------------------------------------------
   fastify.get("/projects/:projectId/stats", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const [total, byStatus, byPriority, avgResponseTime] = await Promise.all([

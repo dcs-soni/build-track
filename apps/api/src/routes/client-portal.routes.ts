@@ -1,5 +1,11 @@
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
 import crypto, { createHash } from "crypto";
+import { z } from "zod";
+import { projectIdParamSchema } from "../schemas/common.schema.js";
+
+const tokenParamSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+});
 
 /** Hash a token with SHA-256 for storage */
 function hashToken(token: string): string {
@@ -24,7 +30,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     "/projects/:projectId/enable",
     { preHandler: authHook },
     async (request, reply) => {
-      const { projectId } = request.params as { projectId: string };
+      const { projectId } = projectIdParamSchema.parse(request.params);
       const tenantId = request.tenantId;
 
       const project = await fastify.prisma.project.findFirst({
@@ -65,7 +71,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     "/projects/:projectId/disable",
     { preHandler: authHook },
     async (request, reply) => {
-      const { projectId } = request.params as { projectId: string };
+      const { projectId } = projectIdParamSchema.parse(request.params);
       const tenantId = request.tenantId;
 
       await fastify.prisma.project.updateMany({
@@ -82,7 +88,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
     "/projects/:projectId/regenerate",
     { preHandler: authHook },
     async (request, reply) => {
-      const { projectId } = request.params as { projectId: string };
+      const { projectId } = projectIdParamSchema.parse(request.params);
       const tenantId = request.tenantId;
 
       const newToken = crypto.randomBytes(32).toString("hex");
@@ -117,7 +123,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Validate client access token and get project overview
   fastify.get("/view/:token", async (request, reply) => {
-    const { token } = request.params as { token: string };
+    const { token } = tokenParamSchema.parse(request.params);
 
     const project = await fastify.prisma.project.findFirst({
       where: { clientAccessToken: hashToken(token), clientAccessEnabled: true },
@@ -150,7 +156,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get project progress (client view)
   fastify.get("/view/:token/progress", async (request, reply) => {
-    const { token } = request.params as { token: string };
+    const { token } = tokenParamSchema.parse(request.params);
 
     const project = await fastify.prisma.project.findFirst({
       where: { clientAccessToken: hashToken(token), clientAccessEnabled: true },
@@ -212,7 +218,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get project photos (client view - limited)
   fastify.get("/view/:token/photos", async (request, reply) => {
-    const { token } = request.params as { token: string };
+    const { token } = tokenParamSchema.parse(request.params);
     const { category, limit: rawLimit = "20" } = request.query as Record<
       string,
       string
@@ -263,7 +269,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get project timeline (client view)
   fastify.get("/view/:token/timeline", async (request, reply) => {
-    const { token } = request.params as { token: string };
+    const { token } = tokenParamSchema.parse(request.params);
 
     const project = await fastify.prisma.project.findFirst({
       where: { clientAccessToken: hashToken(token), clientAccessEnabled: true },
@@ -296,7 +302,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get project updates (client view)
   fastify.get("/view/:token/updates", async (request, reply) => {
-    const { token } = request.params as { token: string };
+    const { token } = tokenParamSchema.parse(request.params);
     const { limit = "20" } = request.query as Record<string, string>;
 
     const project = await fastify.prisma.project.findFirst({
@@ -335,7 +341,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get budget summary (client view - optional, configurable)
   fastify.get("/view/:token/budget", async (request, reply) => {
-    const { token } = request.params as { token: string };
+    const { token } = tokenParamSchema.parse(request.params);
 
     const project = await fastify.prisma.project.findFirst({
       where: { clientAccessToken: hashToken(token), clientAccessEnabled: true },

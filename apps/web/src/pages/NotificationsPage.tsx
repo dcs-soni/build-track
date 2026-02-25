@@ -4,10 +4,10 @@ import { Link } from "react-router-dom";
 import { notificationsApi } from "@/lib/api";
 
 const priorityStyles: Record<string, string> = {
-  low: "bg-gray-100 text-gray-600",
-  normal: "bg-blue-100 text-blue-700",
-  high: "bg-amber-100 text-amber-700",
-  urgent: "bg-red-100 text-red-700",
+  low: "bg-[#2A2A2A] text-[#E1E1E1]",
+  normal: "bg-[#6B8EC4]/20 text-[#6B8EC4]",
+  high: "bg-[#A68B5B]/20 text-[#A68B5B]",
+  urgent: "bg-[#9E534F]/20 text-[#D4796E]",
 };
 
 interface NotificationItem {
@@ -67,31 +67,36 @@ export function NotificationsPage() {
   const preferences = preferencesQuery.data?.data?.data;
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-7xl mx-auto space-y-8 p-6">
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-          <p className="text-gray-500">
+          <p className="text-xs tracking-[0.2em] text-[#A68B5B] uppercase mb-3">
+            Your Inbox
+          </p>
+          <h1 className="text-3xl font-medium text-white tracking-tight">
+            Notifications
+          </h1>
+          <p className="text-sm text-[#4A5568] mt-1">
             Stay on top of assignments and project updates.
           </p>
         </div>
         <button
           onClick={() => markAllMutation.mutate()}
-          className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+          className="px-4 py-2 text-xs font-medium tracking-[0.1em] uppercase border border-[#1A1A1A] text-[#4A5568] hover:text-[#E1E1E1] hover:border-[#2A2A2A] transition-colors duration-300"
         >
           Mark all read
         </button>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {(["all", "unread", "read"] as const).map((value) => (
           <button
             key={value}
             onClick={() => setFilter(value)}
-            className={`px-3 py-1.5 rounded-full text-sm ${
+            className={`px-4 py-1.5 text-xs tracking-wide uppercase transition-colors duration-300 ${
               filter === value
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-[#A68B5B] text-[#0A0A0A] font-medium"
+                : "bg-[#0A0A0A] border border-[#1A1A1A] text-[#4A5568] hover:text-[#E1E1E1] hover:border-[#2A2A2A]"
             }`}
           >
             {value === "all" ? "All" : value === "unread" ? "Unread" : "Read"}
@@ -99,48 +104,55 @@ export function NotificationsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-4">
           {notificationsQuery.isError ? (
-            <div className="text-center py-12 bg-red-50 rounded-xl border border-red-200 text-red-600">
+            <div className="text-center py-12 bg-[#0A0A0A] border border-[#9E534F]/30 text-[#D4796E]">
               <p className="font-medium">Failed to load notifications</p>
-              <p className="text-sm mt-1">Please try refreshing the page.</p>
+              <p className="text-sm text-[#9E534F] mt-1">
+                Please try refreshing the page.
+              </p>
             </div>
           ) : notificationsQuery.isLoading ? (
-            <div className="text-center py-12 text-gray-500">Loading...</div>
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 rounded-full border-2 border-[#A68B5B] border-t-transparent animate-spin" />
+            </div>
           ) : notifications.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-xl border border-gray-200 text-gray-500">
+            <div className="text-center py-12 bg-[#0A0A0A] border border-[#1A1A1A] text-[#4A5568] text-sm">
               You are all caught up.
             </div>
           ) : (
             notifications.map((notification: NotificationItem) => (
               <div
                 key={notification.id}
-                className={`bg-white border rounded-xl p-4 ${
-                  notification.isRead
-                    ? "border-gray-200"
-                    : "border-blue-200 shadow-sm"
+                className={`bg-[#0A0A0A] border p-5 transition-colors duration-300 relative overflow-hidden ${
+                  notification.isRead ? "border-[#1A1A1A]" : "border-[#2A2A2A]"
                 }`}
               >
+                {!notification.isRead && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#A68B5B]" />
+                )}
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className={!notification.isRead ? "pl-2" : ""}>
+                    <div className="flex items-center gap-3 mb-2">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-xs ${
+                        className={`inline-block px-2 py-0.5 text-[10px] tracking-widest uppercase ${
                           priorityStyles[notification.priority ?? "normal"] ||
                           priorityStyles.normal
                         }`}
                       >
                         {notification.priority}
                       </span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-[#4A5568] tabular-nums">
                         {new Date(notification.createdAt).toLocaleString()}
                       </span>
                     </div>
-                    <h3 className="font-semibold text-gray-900">
+                    <h3
+                      className={`font-medium ${notification.isRead ? "text-[#E1E1E1]" : "text-white"}`}
+                    >
                       {notification.title}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-[#4A5568] mt-1.5 leading-relaxed">
                       {notification.message}
                     </p>
                   </div>
@@ -151,22 +163,22 @@ export function NotificationsPage() {
                       }
                     }}
                     disabled={notification.isRead}
-                    className={`text-xs ${
+                    className={`text-xs tracking-wide uppercase transition-colors whitespace-nowrap ${
                       notification.isRead
-                        ? "text-gray-400 cursor-default"
-                        : "text-gray-500 hover:text-gray-900 cursor-pointer"
+                        ? "text-[#2A2A2A] cursor-default"
+                        : "text-[#4A5568] hover:text-[#A68B5B]"
                     }`}
                   >
                     {notification.isRead ? "Read" : "Mark read"}
                   </button>
                 </div>
                 {notification.link && (
-                  <div className="mt-3">
+                  <div className={`mt-4 ${!notification.isRead ? "pl-2" : ""}`}>
                     <Link
                       to={notification.link}
-                      className="text-sm text-blue-600 hover:underline"
+                      className="text-xs text-[#6B8EC4] hover:text-[#4A9079] uppercase tracking-wide flex items-center gap-1 transition-colors w-fit"
                     >
-                      View details
+                      View details <span aria-hidden="true">&rarr;</span>
                     </Link>
                   </div>
                 )}
@@ -175,24 +187,29 @@ export function NotificationsPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-4 h-fit">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-[#0A0A0A] border border-[#1A1A1A] p-6 h-fit">
+          <h2 className="text-sm font-medium text-white mb-6 tracking-wide uppercase">
             Notification Settings
           </h2>
           {preferencesQuery.isError ? (
-            <div className="text-sm text-red-600 bg-red-50 rounded-lg p-3">
+            <div className="text-sm text-[#D4796E] bg-[#9E534F]/10 border border-[#9E534F]/20 p-4">
               <p className="font-medium">Failed to load preferences</p>
-              <p className="text-xs mt-1">Please try refreshing the page.</p>
+              <p className="text-xs mt-1 text-[#9E534F]">
+                Please try refreshing the page.
+              </p>
             </div>
           ) : !preferences ? (
-            <div className="text-sm text-gray-500">Loading preferences...</div>
+            <div className="text-sm text-[#4A5568]">Loading preferences...</div>
           ) : (
-            <div className="space-y-3 text-sm">
-              <label className="flex items-center justify-between">
-                <span>In-app notifications</span>
+            <div className="space-y-4 text-sm text-[#E1E1E1]">
+              <label className="flex items-center justify-between group cursor-pointer">
+                <span className="group-hover:text-white transition-colors">
+                  In-app notifications
+                </span>
                 <input
                   type="checkbox"
                   checked={preferences.inAppEnabled}
+                  className="accent-[#A68B5B] w-4 h-4 bg-[#111111] border-[#2A2A2A]"
                   onChange={(e) =>
                     updatePreferencesMutation.mutate({
                       inAppEnabled: e.target.checked,
@@ -200,11 +217,15 @@ export function NotificationsPage() {
                   }
                 />
               </label>
-              <label className="flex items-center justify-between">
-                <span>Task assignments</span>
+              <div className="w-full h-px bg-[#1A1A1A]" />
+              <label className="flex items-center justify-between group cursor-pointer">
+                <span className="group-hover:text-white transition-colors">
+                  Task assignments
+                </span>
                 <input
                   type="checkbox"
                   checked={preferences.notifyTaskAssigned}
+                  className="accent-[#A68B5B] w-4 h-4 bg-[#111111] border-[#2A2A2A]"
                   onChange={(e) =>
                     updatePreferencesMutation.mutate({
                       notifyTaskAssigned: e.target.checked,
@@ -212,11 +233,15 @@ export function NotificationsPage() {
                   }
                 />
               </label>
-              <label className="flex items-center justify-between">
-                <span>RFI assignments</span>
+              <div className="w-full h-px bg-[#1A1A1A]" />
+              <label className="flex items-center justify-between group cursor-pointer">
+                <span className="group-hover:text-white transition-colors">
+                  RFI assignments
+                </span>
                 <input
                   type="checkbox"
                   checked={preferences.notifyRfiAssigned}
+                  className="accent-[#A68B5B] w-4 h-4 bg-[#111111] border-[#2A2A2A]"
                   onChange={(e) =>
                     updatePreferencesMutation.mutate({
                       notifyRfiAssigned: e.target.checked,
@@ -224,11 +249,15 @@ export function NotificationsPage() {
                   }
                 />
               </label>
-              <label className="flex items-center justify-between">
-                <span>RFI responses</span>
+              <div className="w-full h-px bg-[#1A1A1A]" />
+              <label className="flex items-center justify-between group cursor-pointer">
+                <span className="group-hover:text-white transition-colors">
+                  RFI responses
+                </span>
                 <input
                   type="checkbox"
                   checked={preferences.notifyRfiResponse}
+                  className="accent-[#A68B5B] w-4 h-4 bg-[#111111] border-[#2A2A2A]"
                   onChange={(e) =>
                     updatePreferencesMutation.mutate({
                       notifyRfiResponse: e.target.checked,
@@ -236,11 +265,15 @@ export function NotificationsPage() {
                   }
                 />
               </label>
-              <label className="flex items-center justify-between">
-                <span>Project updates</span>
+              <div className="w-full h-px bg-[#1A1A1A]" />
+              <label className="flex items-center justify-between group cursor-pointer">
+                <span className="group-hover:text-white transition-colors">
+                  Project updates
+                </span>
                 <input
                   type="checkbox"
                   checked={preferences.notifyProjectUpdates}
+                  className="accent-[#A68B5B] w-4 h-4 bg-[#111111] border-[#2A2A2A]"
                   onChange={(e) =>
                     updatePreferencesMutation.mutate({
                       notifyProjectUpdates: e.target.checked,

@@ -11,6 +11,9 @@ import {
   BarChart3,
   FileText,
   Briefcase,
+  HardHat,
+  Receipt,
+  FolderOpen,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
 import { useQuery } from "@tanstack/react-query";
@@ -19,6 +22,9 @@ import { notificationsApi } from "@/lib/api";
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Overview" },
   { to: "/projects", icon: FolderKanban, label: "Projects" },
+  { to: "/equipment", icon: HardHat, label: "Equipment" },
+  { to: "/documents", icon: FolderOpen, label: "Documents" },
+  { to: "/expenses", icon: Receipt, label: "Expenses" },
   { to: "/budget-analytics", icon: BarChart3, label: "Analytics" },
   { to: "/subcontractors", icon: Briefcase, label: "Contractors" },
   { to: "/daily-reports", icon: FileText, label: "Reports" },
@@ -171,7 +177,10 @@ export function DashboardLayout() {
 
             <div className="h-6 w-px bg-[#1A1A1A]" />
 
-            <button className="flex items-center gap-2 px-5 py-2.5 border border-[#A68B5B] text-[#A68B5B] text-xs font-medium tracking-[0.1em] uppercase hover:bg-[#A68B5B] hover:text-[#0A0A0A] transition-all duration-500">
+            <button
+              onClick={() => navigate("/projects?create=true")}
+              className="flex items-center gap-2 px-5 py-2.5 border border-[#A68B5B] text-[#A68B5B] text-xs font-medium tracking-[0.1em] uppercase hover:bg-[#A68B5B] hover:text-[#0A0A0A] transition-all duration-500"
+            >
               <FolderKanban className="h-4 w-4" strokeWidth={1.5} />
               New Project
             </button>

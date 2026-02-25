@@ -1,10 +1,15 @@
 import type { FastifyPluginAsync } from "fastify";
+import { z } from "zod";
+import { projectIdParamSchema } from "../schemas/common.schema.js";
+
+const taskIdParamSchema = z.object({
+  taskId: z.string().uuid("Invalid task ID"),
+});
 
 export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
-
   // Get Gantt chart data for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     // Verify project access
@@ -14,12 +19,10 @@ export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!project) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Project not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Project not found" },
+      });
     }
 
     // Get all tasks with hierarchy
@@ -104,7 +107,7 @@ export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update task dates (for drag-and-drop)
   fastify.patch("/tasks/:taskId/dates", async (request, reply) => {
-    const { taskId } = request.params as { taskId: string };
+    const { taskId } = taskIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const { startDate, dueDate } = request.body as {
       startDate?: string;
@@ -112,15 +115,13 @@ export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
     };
 
     if (!startDate && !dueDate) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: {
-            code: "INVALID_INPUT",
-            message: "Provide startDate or dueDate",
-          },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "INVALID_INPUT",
+          message: "Provide startDate or dueDate",
+        },
+      });
     }
 
     const result = await fastify.prisma.task.updateMany({
@@ -132,12 +133,10 @@ export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Task not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Task not found" },
+      });
     }
 
     const updated = await fastify.prisma.task.findFirst({
@@ -148,20 +147,18 @@ export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update task dependencies
   fastify.patch("/tasks/:taskId/dependencies", async (request, reply) => {
-    const { taskId } = request.params as { taskId: string };
+    const { taskId } = taskIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const { dependsOn } = request.body as { dependsOn: string[] };
 
     if (!Array.isArray(dependsOn)) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: {
-            code: "INVALID_INPUT",
-            message: "dependsOn must be an array",
-          },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "INVALID_INPUT",
+          message: "dependsOn must be an array",
+        },
+      });
     }
 
     // Validate that all dependency IDs exist
@@ -172,28 +169,24 @@ export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       if (existing.length !== dependsOn.length) {
-        return reply
-          .status(400)
-          .send({
-            success: false,
-            error: {
-              code: "INVALID_DEPENDENCIES",
-              message: "Some dependency IDs are invalid",
-            },
-          });
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: "INVALID_DEPENDENCIES",
+            message: "Some dependency IDs are invalid",
+          },
+        });
       }
 
       // Check for circular dependencies
       if (dependsOn.includes(taskId)) {
-        return reply
-          .status(400)
-          .send({
-            success: false,
-            error: {
-              code: "CIRCULAR_DEPENDENCY",
-              message: "Task cannot depend on itself",
-            },
-          });
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: "CIRCULAR_DEPENDENCY",
+            message: "Task cannot depend on itself",
+          },
+        });
       }
     }
 
@@ -203,12 +196,10 @@ export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Task not found" },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Task not found" },
+      });
     }
 
     const updated = await fastify.prisma.task.findFirst({
@@ -219,17 +210,15 @@ export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update task progress
   fastify.patch("/tasks/:taskId/progress", async (request, reply) => {
-    const { taskId } = request.params as { taskId: string };
+    const { taskId } = taskIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const { progress } = request.body as { progress: number };
 
     if (typeof progress !== "number" || progress < 0 || progress > 100) {
-      return reply
-        .status(400)
-        .send({
-          success: false,
-          error: { code: "INVALID_INPUT", message: "Progress must be 0-100" },
-        });
+      return reply.status(400).send({
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Progress must be 0-100" },
+      });
     }
 
     const updateData: Record<string, unknown> = { progressPercent: progress };
@@ -248,15 +237,13 @@ export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (result.count === 0) {
-      return reply
-        .status(404)
-        .send({
-          success: false,
-          error: {
-            code: "NOT_FOUND",
-            message: "Task not found or already completed",
-          },
-        });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: "Task not found or already completed",
+        },
+      });
     }
 
     const updated = await fastify.prisma.task.findFirst({
@@ -267,7 +254,7 @@ export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get critical path
   fastify.get("/projects/:projectId/critical-path", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const tasks = await fastify.prisma.task.findMany({
@@ -308,7 +295,7 @@ export const timelineRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get overdue tasks
   fastify.get("/projects/:projectId/overdue", async (request, reply) => {
-    const { projectId } = request.params as { projectId: string };
+    const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
     const now = new Date();
 

@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { listQuerySchema, idParamSchema } from "../schemas/common.schema.js";
 
 const createProjectSchema = z.object({
   name: z.string().min(1),
@@ -31,7 +32,6 @@ const updateProjectSchema = createProjectSchema.partial().extend({
 });
 
 export const projectRoutes: FastifyPluginAsync = async (fastify) => {
-
   // List projects
   fastify.get("/", async (request, reply) => {
     const tenantId = request.tenantId;
@@ -42,12 +42,9 @@ export const projectRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    const {
-      status,
-      search,
-      page = "1",
-      limit = "10",
-    } = request.query as Record<string, string>;
+    const { status, search, page, limit } = listQuerySchema.parse(
+      request.query,
+    );
 
     const where = {
       tenantId,
@@ -60,8 +57,8 @@ export const projectRoutes: FastifyPluginAsync = async (fastify) => {
     const [projects, total] = await Promise.all([
       fastify.prisma.project.findMany({
         where,
-        skip: (parseInt(page) - 1) * parseInt(limit),
-        take: Math.min(parseInt(limit), 100),
+        skip: (page - 1) * limit,
+        take: limit,
         orderBy: { createdAt: "desc" },
       }),
       fastify.prisma.project.count({ where }),
@@ -72,10 +69,10 @@ export const projectRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         items: projects,
         meta: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page,
+          limit,
           total,
-          totalPages: Math.ceil(total / parseInt(limit)),
+          totalPages: Math.ceil(total / limit),
         },
       },
     });
@@ -83,7 +80,7 @@ export const projectRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get single project
   fastify.get("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const project = await fastify.prisma.project.findFirst({
@@ -136,7 +133,7 @@ export const projectRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update project
   fastify.patch("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const body = updateProjectSchema.parse(request.body);
@@ -167,7 +164,7 @@ export const projectRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete project
   fastify.delete("/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const result = await fastify.prisma.project.deleteMany({
@@ -186,7 +183,7 @@ export const projectRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get project dashboard/summary
   fastify.get("/:id/dashboard", async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = idParamSchema.parse(request.params);
     const tenantId = request.tenantId;
 
     const project = await fastify.prisma.project.findFirst({

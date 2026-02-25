@@ -306,7 +306,7 @@ export function DashboardPage() {
             <div className="py-12 text-center">
               <p className="text-[#4A5568] mb-4">No projects yet</p>
               <Link
-                to="/projects/new"
+                to="/projects?create=true"
                 className="text-[#A68B5B] text-sm hover:text-white transition-colors"
               >
                 Create your first project →
