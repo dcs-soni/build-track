@@ -24,12 +24,10 @@ api.interceptors.response.use(
           const { data } = await axios.post("/api/v1/auth/refresh", {
             refreshToken,
           });
-          useAuthStore
-            .getState()
-            .setAuth(useAuthStore.getState().user!, {
-              accessToken: data.data.accessToken,
-              refreshToken: data.data.refreshToken,
-            });
+          useAuthStore.getState().setAuth(useAuthStore.getState().user!, {
+            accessToken: data.data.accessToken,
+            refreshToken: data.data.refreshToken,
+          });
           error.config.headers.Authorization = `Bearer ${data.data.accessToken}`;
           return api(error.config);
         } catch {
@@ -93,4 +91,65 @@ export const projectUpdatesApi = {
     api.get(`/projects/${projectId}/updates`, { params }),
   create: (projectId: string, data: Record<string, unknown>) =>
     api.post(`/projects/${projectId}/updates`, data),
+};
+
+// RFI (Request for Information) API
+export const rfiApi = {
+  listByProject: (projectId: string, params?: Record<string, string>) =>
+    api.get(`/rfis/projects/${projectId}`, { params }),
+  get: (id: string) => api.get(`/rfis/${id}`),
+  create: (data: Record<string, unknown>) => api.post("/rfis", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/rfis/${id}`, data),
+  submit: (id: string) => api.post(`/rfis/${id}/submit`),
+  respond: (id: string, data: { response: string; isOfficial?: boolean }) =>
+    api.post(`/rfis/${id}/respond`, data),
+  close: (id: string, data?: { officialAnswer?: string }) =>
+    api.post(`/rfis/${id}/close`, data || {}),
+  voidRfi: (id: string) => api.post(`/rfis/${id}/void`),
+  delete: (id: string) => api.delete(`/rfis/${id}`),
+};
+
+// Equipment API
+export const equipmentApi = {
+  list: (params?: Record<string, string>) => api.get("/equipment", { params }),
+  get: (id: string) => api.get(`/equipment/${id}`),
+  create: (data: Record<string, unknown>) => api.post("/equipment", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/equipment/${id}`, data),
+  checkout: (id: string, data: Record<string, unknown>) =>
+    api.post(`/equipment/${id}/checkout`, data),
+  checkin: (id: string, data: Record<string, unknown>) =>
+    api.post(`/equipment/${id}/checkin`, data),
+  history: (id: string) => api.get(`/equipment/${id}/history`),
+};
+
+// Expense API
+export const expenseApi = {
+  list: (params?: Record<string, string>) => api.get("/expenses", { params }),
+  get: (id: string) => api.get(`/expenses/${id}`),
+  create: (data: Record<string, unknown>) => api.post("/expenses", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/expenses/${id}`, data),
+  delete: (id: string) => api.delete(`/expenses/${id}`),
+  approve: (id: string) => api.post(`/expenses/${id}/approve`),
+  reject: (id: string) => api.post(`/expenses/${id}/reject`),
+  uploadReceipt: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post(`/expenses/${id}/receipt`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+};
+
+// Document Management API
+export const documentApi = {
+  list: (projectId: string, folderId?: string) =>
+    api.get(`/documents/projects/${projectId}`, { params: { folderId } }),
+  get: (id: string) => api.get(`/documents/${id}`),
+  create: (data: Record<string, unknown>) => api.post("/documents", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/documents/${id}`, data),
+  delete: (id: string) => api.delete(`/documents/${id}`),
 };
