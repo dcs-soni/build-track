@@ -248,14 +248,13 @@ export const subcontractorPortalRoutes: FastifyPluginAsync = async (
         where: { id: taskId },
         data: {
           progressPercent: body.progressPercent,
-          ...(body.progressPercent === 100 && {
-            status: "completed",
-            completedAt: new Date(),
-          }),
-          ...(body.progressPercent > 0 &&
-            body.progressPercent < 100 && {
-              status: "in_progress",
-            }),
+          status:
+            body.progressPercent === 100
+              ? "completed"
+              : body.progressPercent === 0
+                ? "pending"
+                : "in_progress",
+          completedAt: body.progressPercent === 100 ? new Date() : null,
         },
         include: {
           project: { select: { id: true, name: true } },
