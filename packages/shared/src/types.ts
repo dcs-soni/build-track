@@ -460,3 +460,167 @@ export interface PaginatedResponse<T> {
   items: T[];
   meta: PaginationMeta;
 }
+
+// Inspection Types
+export type InspectionType =
+  | "structural"
+  | "electrical"
+  | "plumbing"
+  | "fire_safety"
+  | "hvac"
+  | "roofing"
+  | "foundation"
+  | "final"
+  | "other";
+export type InspectionStatus =
+  | "scheduled"
+  | "in_progress"
+  | "passed"
+  | "failed"
+  | "needs_reinspection"
+  | "cancelled";
+export type InspectionResult = "pass" | "fail" | "conditional_pass";
+
+export interface Inspection {
+  id: string;
+  tenantId: string;
+  projectId: string;
+  inspectionNumber: string;
+  inspectionType: InspectionType;
+  title: string;
+  description?: string | null;
+  status: InspectionStatus;
+  result?: InspectionResult | null;
+  inspectorId?: string | null;
+  inspectorName?: string | null;
+  inspectorCompany?: string | null;
+  scheduledDate: Date;
+  scheduledTime?: string | null;
+  completedDate?: Date | null;
+  location?: string | null;
+  drawingRef?: string | null;
+  specSection?: string | null;
+  findings?: string | null;
+  deficiencies?: string | null;
+  correctiveActions?: string | null;
+  costImpact: boolean;
+  scheduleImpact: boolean;
+  estimatedCost?: number | null;
+  delayDays?: number | null;
+  reportUrl?: string | null;
+  photoUrls: string[];
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  project?: { id: string; name: string } | null;
+  inspector?: { id: string; name: string } | null;
+  creator?: { id: string; name: string } | null;
+}
+
+// Punch List Types
+export type PunchListCategory =
+  | "general"
+  | "electrical"
+  | "plumbing"
+  | "hvac"
+  | "structural"
+  | "finish"
+  | "landscape"
+  | "other";
+export type PunchListPriority = "low" | "medium" | "high" | "critical";
+export type PunchListStatus =
+  | "open"
+  | "in_progress"
+  | "resolved"
+  | "verified"
+  | "wont_fix";
+
+export interface PunchListItem {
+  id: string;
+  tenantId: string;
+  projectId: string;
+  itemNumber: string;
+  title: string;
+  description?: string | null;
+  category: PunchListCategory;
+  priority: PunchListPriority;
+  status: PunchListStatus;
+  location?: string | null;
+  floor?: string | null;
+  room?: string | null;
+  drawingRef?: string | null;
+  assignedToId?: string | null;
+  dueDate?: Date | null;
+  resolution?: string | null;
+  resolvedAt?: Date | null;
+  verifiedById?: string | null;
+  verifiedAt?: Date | null;
+  photoUrls: string[];
+  notes?: string | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  project?: { id: string; name: string } | null;
+  assignedTo?: { id: string; name: string } | null;
+  verifiedBy?: { id: string; name: string } | null;
+  creator?: { id: string; name: string } | null;
+}
+
+// Safety Incident Types
+export type SafetyIncidentType =
+  | "near_miss"
+  | "first_aid"
+  | "recordable"
+  | "lost_time"
+  | "property_damage"
+  | "environmental";
+export type SafetySeverity = "low" | "medium" | "high" | "critical";
+export type SafetyIncidentStatus =
+  | "reported"
+  | "investigating"
+  | "resolved"
+  | "closed";
+
+export interface SafetyIncident {
+  id: string;
+  tenantId: string;
+  projectId: string;
+  incidentNumber: string;
+  title: string;
+  description: string;
+  incidentType: SafetyIncidentType;
+  severity: SafetySeverity;
+  status: SafetyIncidentStatus;
+  incidentDate: Date;
+  incidentTime?: string | null;
+  location?: string | null;
+  weather?: string | null;
+  injuredParty?: string | null;
+  witnesses?: string | null;
+  workersOnSite?: number | null;
+  rootCause?: string | null;
+  immediateAction?: string | null;
+  correctiveAction?: string | null;
+  preventiveAction?: string | null;
+  investigatedAt?: Date | null;
+  investigationNotes?: string | null;
+  resolvedAt?: Date | null;
+  closedAt?: Date | null;
+  closureNotes?: string | null;
+  oshaRecordable: boolean;
+  daysLost: number;
+  restrictedDays: number;
+  photoUrls: string[];
+  reportUrl?: string | null;
+  reportedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  project?: { id: string; name: string } | null;
+  reporter?: { id: string; name: string } | null;
+}

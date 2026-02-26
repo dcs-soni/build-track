@@ -78,6 +78,22 @@ model User {
   projectUpdates           ProjectUpdate[]
   notificationPreferences  NotificationPreference[]
 
+  // Inspection Relations
+  inspectionsAsInspector  Inspection[]     @relation("InspectionInspector")
+  createdInspections      Inspection[]     @relation("InspectionCreator")
+
+  // Punch List Relations
+  assignedPunchItems      PunchListItem[]  @relation("PunchItemAssignee")
+  verifiedPunchItems      PunchListItem[]  @relation("PunchItemVerifier")
+  createdPunchItems       PunchListItem[]  @relation("PunchItemCreator")
+
+  // Safety Incident Relations
+  reportedIncidents       SafetyIncident[] @relation("IncidentReporter")
+
+  // Change Order Relations
+  requestedChangeOrders   ChangeOrder[]    @relation("ChangeOrderRequester")
+  approvedChangeOrders    ChangeOrder[]    @relation("ChangeOrderApprover")
+
   @@map("users")
 }
 
@@ -171,6 +187,10 @@ model Project {
   currentEquipment   Equipment[]           @relation("CurrentEquipment")
   equipmentAssignments EquipmentAssignment[]
   updates      ProjectUpdate[]
+  inspections    Inspection[]
+  punchListItems PunchListItem[]
+  safetyIncidents SafetyIncident[]
+  changeOrders   ChangeOrder[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -226,8 +246,9 @@ model BudgetItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  expenses Expense[]
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  expenses         Expense[]
+  changeOrderItems ChangeOrderItem[]
 
   @@index([tenantId])
   @@index([projectId])
@@ -950,4 +971,301 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("refresh_tokens")
+}
+
+// ============================================================================
+// INSPECTIONS
+// ============================================================================
+
+model Inspection {
+  id            String    @id @default(uuid())
+  tenantId      String
+  projectId     String
+
+  // Identification
+  inspectionNumber String  @db.VarChar(50)  // Auto-generated: PROJ-INS-001
+  inspectionType   String  @db.VarChar(100) // structural, electrical, plumbing, fire_safety, hvac, roofing, foundation, final, other
+  title            String  @db.VarChar(255)
+  description      String? @db.Text
+
+  // Status & Result
+  status           String  @default("scheduled") @db.VarChar(50)
+  // Values: scheduled, in_progress, passed, failed, needs_reinspection, cancelled
+  result           String? @db.VarChar(50)  // pass, fail, conditional_pass
+
+  // Assignment
+  inspectorId      String?   // Internal inspector user
+  inspectorName    String?   @db.VarChar(255) // External inspector name
+  inspectorCompany String?   @db.VarChar(255) // External inspector company
+
+  // Scheduling
+  scheduledDate    DateTime  @db.Date
+  scheduledTime    String?   @db.VarChar(20)  // e.g., "09:00 AM"
+  completedDate    DateTime?
+
+  // Location & Reference
+  location         String?   @db.VarChar(255)
+  drawingRef       String?   @db.VarChar(255)
+  specSection      String?   @db.VarChar(100)
+
+  // Findings
+  findings         String?   @db.Text
+  deficiencies     String?   @db.Text
+  correctiveActions String?  @db.Text
+
+  // Cost & Schedule Impact
+  costImpact       Boolean   @default(false)
+  scheduleImpact   Boolean   @default(false)
+  estimatedCost    Decimal?  @db.Decimal(15, 2)
+  delayDays        Int?
+
+  // Documents
+  reportUrl        String?   @db.VarChar(500)
+  photoUrls        String[]  @default([])
+
+  // Metadata
+  createdBy        String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inspector        User?     @relation("InspectionInspector", fields: [inspectorId], references: [id])
+  creator          User      @relation("InspectionCreator", fields: [createdBy], references: [id])
+
+  @@unique([projectId, inspectionNumber])
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([projectId, tenantId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@index([inspectionType])
+  @@map("inspections")
+}
+
+// ============================================================================
+// PUNCH LIST (SNAG LIST)
+// ============================================================================
+
+model PunchListItem {
+  id            String    @id @default(uuid())
+  tenantId      String
+  projectId     String
+
+  // Identification
+  itemNumber    String    @db.VarChar(50)  // Auto-generated: PROJ-PL-001
+  title         String    @db.VarChar(255)
+  description   String?   @db.Text
+
+  // Classification
+  category      String    @default("general") @db.VarChar(50)
+  // Values: general, electrical, plumbing, hvac, structural, finish, landscape, other
+  priority      String    @default("medium") @db.VarChar(20)
+  // Values: low, medium, high, critical
+  status        String    @default("open") @db.VarChar(50)
+  // Values: open, in_progress, resolved, verified, wont_fix
+
+  // Location & Reference
+  location      String?   @db.VarChar(255)
+  floor         String?   @db.VarChar(50)
+  room          String?   @db.VarChar(100)
+  drawingRef    String?   @db.VarChar(255)
+
+  // Assignment
+  assignedToId  String?   // Responsible user
+  dueDate       DateTime? @db.Date
+
+  // Resolution
+  resolution    String?   @db.Text
+  resolvedAt    DateTime?
+  verifiedById  String?   // Different user who verified the fix
+  verifiedAt    DateTime?
+
+  // Documentation
+  photoUrls     String[]  @default([])
+  notes         String?   @db.Text
+
+  // Metadata
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo    User?     @relation("PunchItemAssignee", fields: [assignedToId], references: [id])
+  verifiedBy    User?     @relation("PunchItemVerifier", fields: [verifiedById], references: [id])
+  creator       User      @relation("PunchItemCreator", fields: [createdBy], references: [id])
+
+  @@unique([projectId, itemNumber])
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([projectId, tenantId])
+  @@index([status])
+  @@index([priority])
+  @@index([assignedToId])
+  @@index([dueDate])
+  @@map("punch_list_items")
+}
+
+// ============================================================================
+// SAFETY INCIDENTS
+// ============================================================================
+
+model SafetyIncident {
+  id            String    @id @default(uuid())
+  tenantId      String
+  projectId     String
+
+  // Identification
+  incidentNumber String   @db.VarChar(50)  // Auto-generated: PROJ-SI-001
+  title          String   @db.VarChar(255)
+  description    String   @db.Text
+
+  // Classification
+  incidentType   String   @db.VarChar(50)
+  // Values: near_miss, first_aid, recordable, lost_time, property_damage, environmental
+  severity       String   @default("low") @db.VarChar(20)
+  // Values: low, medium, high, critical
+  status         String   @default("reported") @db.VarChar(50)
+  // Values: reported, investigating, resolved, closed
+
+  // Incident Details
+  incidentDate   DateTime @db.Date
+  incidentTime   String?  @db.VarChar(20)
+  location       String?  @db.VarChar(255)
+  weather        String?  @db.VarChar(50)
+
+  // People Involved
+  injuredParty   String?  @db.VarChar(255)
+  witnesses      String?  @db.Text
+  workersOnSite  Int?
+
+  // Root Cause & Corrective Actions
+  rootCause      String?  @db.Text
+  immediateAction String? @db.Text
+  correctiveAction String? @db.Text
+  preventiveAction String? @db.Text
+
+  // Investigation
+  investigatedAt   DateTime?
+  investigationNotes String? @db.Text
+
+  // Resolution
+  resolvedAt       DateTime?
+  closedAt         DateTime?
+  closureNotes     String?  @db.Text
+
+  // OSHA Recordable
+  oshaRecordable   Boolean  @default(false)
+  daysLost         Int      @default(0)
+  restrictedDays   Int      @default(0)
+
+  // Documentation
+  photoUrls        String[] @default([])
+  reportUrl        String?  @db.VarChar(500)
+
+  // Metadata
+  reportedBy       String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reporter         User     @relation("IncidentReporter", fields: [reportedBy], references: [id])
+
+  @@unique([projectId, incidentNumber])
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([projectId, tenantId])
+  @@index([status])
+  @@index([severity])
+  @@index([incidentType])
+  @@index([incidentDate])
+  @@map("safety_incidents")
+}
+
+// ============================================================================
+// CHANGE ORDERS (Scope Change Tracking)
+// ============================================================================
+
+model ChangeOrder {
+  id            String    @id @default(uuid())
+  tenantId      String
+  projectId     String
+
+  // Identification
+  coNumber      String    @db.VarChar(50)  // Auto-generated: CO-001
+  title         String    @db.VarChar(255)
+  description   String?   @db.Text
+  reason        String?   @db.Text  // Justification for the change
+
+  // Status Workflow: draft → submitted → under_review → approved / rejected / void
+  status        String    @default("draft") @db.VarChar(50)
+  priority      String    @default("medium") @db.VarChar(20)
+
+  // Financial Impact
+  estimatedCost Decimal?  @db.Decimal(15, 2)
+  approvedCost  Decimal?  @db.Decimal(15, 2)
+
+  // Schedule Impact
+  scheduleDays  Int?      // Estimated days of delay/acceleration
+  scheduleImpact Boolean  @default(false)
+
+  // Key Dates
+  submittedAt   DateTime?
+  reviewedAt    DateTime?
+  approvedAt    DateTime?
+  rejectedAt    DateTime?
+
+  // Approval Chain
+  requestedBy   String    // User who created/requested
+  approvedById  String?   // User who approved/rejected
+  rejectionReason String? @db.Text
+
+  // Reference
+  drawingRef    String?   @db.VarChar(255)
+  specSection   String?   @db.VarChar(100)
+
+  // Metadata
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requester     User            @relation("ChangeOrderRequester", fields: [requestedBy], references: [id])
+  approvedBy    User?           @relation("ChangeOrderApprover", fields: [approvedById], references: [id])
+  items         ChangeOrderItem[]
+
+  @@unique([projectId, coNumber])
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([projectId, tenantId])
+  @@index([status])
+  @@index([requestedBy])
+  @@map("change_orders")
+}
+
+model ChangeOrderItem {
+  id              String    @id @default(uuid())
+  changeOrderId   String
+  budgetItemId    String?   // Optional link to existing budget item
+
+  // Line Item Details
+  category        String    @db.VarChar(100) // labor, materials, equipment, subcontractor, other
+  description     String    @db.Text
+  quantity        Decimal   @default(1)  @db.Decimal(10, 2)
+  unitCost        Decimal   @db.Decimal(15, 2)
+  totalCost       Decimal   @db.Decimal(15, 2) // quantity * unitCost
+  notes           String?   @db.Text
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  changeOrder     ChangeOrder @relation(fields: [changeOrderId], references: [id], onDelete: Cascade)
+  budgetItem      BudgetItem? @relation(fields: [budgetItemId], references: [id])
+
+  @@index([changeOrderId])
+  @@index([budgetItemId])
+  @@map("change_order_items")
 }

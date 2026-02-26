@@ -66,3 +66,51 @@ export const EXPENSE_CATEGORIES = [
 
 export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 100;
+
+// ─── Inspection status variants ──────────────────────────────────────────────
+
+export const INSPECTION_STATUS_VARIANT: Record<string, StatusVariant> = {
+  scheduled: "neutral",
+  in_progress: "warning",
+  passed: "success",
+  failed: "danger",
+  needs_reinspection: "warning",
+  cancelled: "danger",
+};
+
+// ─── Punch List status variants ──────────────────────────────────────────────
+
+export const PUNCH_LIST_STATUS_VARIANT: Record<string, StatusVariant> = {
+  open: "warning",
+  in_progress: "warning",
+  resolved: "success",
+  verified: "success",
+  wont_fix: "neutral",
+};
+
+// ─── Safety Incident variants ────────────────────────────────────────────────
+
+export const SAFETY_STATUS_VARIANT: Record<string, StatusVariant> = {
+  reported: "warning",
+  investigating: "warning",
+  resolved: "success",
+  closed: "neutral",
+};
+
+export const SAFETY_SEVERITY_VARIANT: Record<string, StatusVariant> = {
+  low: "neutral",
+  medium: "warning",
+  high: "danger",
+  critical: "danger",
+};
+
+// ─── Change Order status variants ────────────────────────────────────────────
+
+export const CHANGE_ORDER_STATUS_VARIANT: Record<string, StatusVariant> = {
+  draft: "neutral",
+  submitted: "warning",
+  under_review: "warning",
+  approved: "success",
+  rejected: "danger",
+  void: "danger",
+};
