@@ -5,6 +5,7 @@ import * as argon2 from "argon2";
 // ─── Zod Schemas ─────────────────────────────────────────────────────────────
 
 const loginSchema = z.object({
+  tenantId: z.string().uuid(),
   email: z.string().email(),
   accessToken: z.string().min(1),
 });
@@ -46,15 +47,17 @@ export const subcontractorPortalRoutes: FastifyPluginAsync = async (
   fastify.post("/auth/login", async (request, reply) => {
     const body = loginSchema.parse(request.body);
 
-    // Find subcontractor by email
-    const subcontractor = await fastify.prisma.subcontractor.findFirst({
+    // Find subcontractor deterministically by uniquely identifying tenantId + email
+    const subcontractor = await fastify.prisma.subcontractor.findUnique({
       where: {
-        email: body.email,
-        isActive: true,
+        tenantId_email: {
+          tenantId: body.tenantId,
+          email: body.email,
+        },
       },
     });
 
-    if (!subcontractor) {
+    if (!subcontractor || !subcontractor.isActive) {
       // Run a dummy verify to prevent timing-based enumeration
       await verifyPortalSecret(body.accessToken, null);
       return reply.status(401).send({

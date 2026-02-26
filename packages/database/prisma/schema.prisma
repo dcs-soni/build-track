@@ -461,6 +461,7 @@ model Subcontractor {
   @@index([tenantId])
   @@index([trade])
   @@index([isActive])
+  @@unique([tenantId, email])
   @@map("subcontractors")
 }
 

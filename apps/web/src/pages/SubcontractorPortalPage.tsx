@@ -52,7 +52,11 @@ export function SubcontractorPortalPage() {
       const res = await fetch(`${API_BASE}/sub-portal/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, accessToken }),
+        body: JSON.stringify({
+          email,
+          accessToken,
+          tenantId: "some-tenant-id",
+        }), // In a real app, this would be selected/inferred
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
