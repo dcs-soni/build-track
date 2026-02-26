@@ -66,25 +66,15 @@ export const subcontractorPortalRoutes: FastifyPluginAsync = async (
       });
     }
 
-    // Reject immediately if the subcontractor has no portal secret configured
-    if (!subcontractor.portalSecretHash) {
-      return reply.status(401).send({
-        success: false,
-        error: {
-          code: "PORTAL_NOT_CONFIGURED",
-          message:
-            "Portal access has not been configured for this subcontractor",
-        },
-      });
-    }
-
-    // Securely verify the provided access token against the stored hash
+    // Securely verify the provided access token against the stored hash.
+    // If portalSecretHash is null, this runs against DUMMY_PORTAL_HASH
+    // to prevent timing-based user enumeration.
     const isValid = await verifyPortalSecret(
       body.accessToken,
       subcontractor.portalSecretHash,
     );
 
-    if (!isValid) {
+    if (!isValid || !subcontractor.portalSecretHash) {
       return reply.status(401).send({
         success: false,
         error: {
