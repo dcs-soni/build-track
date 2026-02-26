@@ -208,6 +208,10 @@ export function SubcontractorPortalPage() {
               onClick={() => {
                 setIsLoggedIn(false);
                 setToken("");
+                setProfile(null);
+                setTasks([]);
+                setEmail("");
+                setAccessToken("");
               }}
               className="px-4 py-2 text-xs text-[#718096] hover:text-[#A68B5B] uppercase tracking-wider transition-colors"
             >
