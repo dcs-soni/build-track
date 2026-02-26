@@ -104,6 +104,36 @@ const NotificationsPage = lazy(() =>
     default: m.NotificationsPage,
   })),
 );
+const InspectionsPage = lazy(() =>
+  import("@/pages/InspectionsPage").then((m) => ({
+    default: m.InspectionsPage,
+  })),
+);
+const PunchListPage = lazy(() =>
+  import("@/pages/PunchListPage").then((m) => ({
+    default: m.PunchListPage,
+  })),
+);
+const SafetyIncidentsPage = lazy(() =>
+  import("@/pages/SafetyIncidentsPage").then((m) => ({
+    default: m.SafetyIncidentsPage,
+  })),
+);
+const ChangeOrdersPage = lazy(() =>
+  import("@/pages/ChangeOrdersPage").then((m) => ({
+    default: m.ChangeOrdersPage,
+  })),
+);
+const ProgressReportsPage = lazy(() =>
+  import("@/pages/ProgressReportsPage").then((m) => ({
+    default: m.ProgressReportsPage,
+  })),
+);
+const SubcontractorPortalPage = lazy(() =>
+  import("@/pages/SubcontractorPortalPage").then((m) => ({
+    default: m.SubcontractorPortalPage,
+  })),
+);
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -122,6 +152,7 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/sub-portal" element={<SubcontractorPortalPage />} />
 
           {/* Protected Routes */}
           <Route
@@ -204,6 +235,37 @@ export default function App() {
             <Route
               path="/projects/:projectId/timeline"
               element={<ProjectTimelinePage />}
+            />
+
+            {/* Inspections */}
+            <Route
+              path="/projects/:projectId/inspections"
+              element={<InspectionsPage />}
+            />
+
+            {/* Punch List */}
+            <Route
+              path="/projects/:projectId/punch-list"
+              element={<PunchListPage />}
+            />
+
+            {/* Safety Incidents */}
+            <Route path="/safety-incidents" element={<SafetyIncidentsPage />} />
+            <Route
+              path="/projects/:projectId/safety-incidents"
+              element={<SafetyIncidentsPage />}
+            />
+
+            {/* Change Orders */}
+            <Route
+              path="/projects/:projectId/change-orders"
+              element={<ChangeOrdersPage />}
+            />
+
+            {/* Progress Reports */}
+            <Route
+              path="/projects/:projectId/reports/progress"
+              element={<ProgressReportsPage />}
             />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

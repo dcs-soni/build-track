@@ -26,6 +26,12 @@ import { notificationRoutes } from "./routes/notification.routes.js";
 import { projectUpdateRoutes } from "./routes/project-updates.routes.js";
 import { analyticsRoutes } from "./routes/analytics.routes.js";
 import { documentRoutes } from "./routes/document.routes.js";
+import { inspectionRoutes } from "./routes/inspection.routes.js";
+import { punchListRoutes } from "./routes/punch-list.routes.js";
+import { safetyIncidentRoutes } from "./routes/safety-incident.routes.js";
+import { changeOrderRoutes } from "./routes/change-order.routes.js";
+import { progressReportRoutes } from "./routes/progress-report.routes.js";
+import { subcontractorPortalRoutes } from "./routes/subcontractor-portal.routes.js";
 import { tenantPlugin } from "./plugins/tenant.plugin.js";
 import { errorHandler } from "./plugins/error.plugin.js";
 import { authGuardPlugin } from "./plugins/auth-guard.plugin.js";
@@ -82,6 +88,9 @@ export async function buildApp() {
   // — they handle auth per-route internally
   await app.register(invitationRoutes, { prefix: "/api/v1/invitations" });
   await app.register(clientPortalRoutes, { prefix: "/api/v1/client" });
+  await app.register(subcontractorPortalRoutes, {
+    prefix: "/api/v1/sub-portal",
+  });
 
   // ====================
   // PROTECTED ROUTES (auth guard applied to all)
@@ -137,6 +146,27 @@ export async function buildApp() {
 
       // Documents
       await instance.register(documentRoutes, { prefix: "/documents" });
+
+      // Inspections
+      await instance.register(inspectionRoutes, { prefix: "/inspections" });
+
+      // Punch List
+      await instance.register(punchListRoutes, { prefix: "/punch-list" });
+
+      // Safety Incidents
+      await instance.register(safetyIncidentRoutes, {
+        prefix: "/safety-incidents",
+      });
+
+      // Change Orders
+      await instance.register(changeOrderRoutes, {
+        prefix: "/change-orders",
+      });
+
+      // Progress Reports
+      await instance.register(progressReportRoutes, {
+        prefix: "/reports",
+      });
     },
     { prefix: "/api/v1" },
   );
