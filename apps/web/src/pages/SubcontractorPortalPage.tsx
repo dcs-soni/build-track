@@ -37,6 +37,7 @@ export function SubcontractorPortalPage() {
   const [token, setToken] = useState("");
   const [profile, setProfile] = useState<SubProfile | null>(null);
   const [tasks, setTasks] = useState<SubTask[]>([]);
+  const [tenantId, setTenantId] = useState("");
   const [email, setEmail] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -52,11 +53,8 @@ export function SubcontractorPortalPage() {
       const res = await fetch(`${API_BASE}/sub-portal/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          accessToken,
-          tenantId: "some-tenant-id",
-        }), // In a real app, this would be selected/inferred
+        // Use the actual tenantId entered by the user
+        body: JSON.stringify({ email, accessToken, tenantId }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -159,6 +157,18 @@ export function SubcontractorPortalPage() {
           <div className="bg-[#111111] border border-[#1A1A1A] p-6 space-y-5">
             <div>
               <label className="block text-xs text-[#718096] uppercase tracking-wider mb-2">
+                Tenant (Company) ID
+              </label>
+              <input
+                type="text"
+                value={tenantId}
+                onChange={(e) => setTenantId(e.target.value)}
+                placeholder="e.g. 123e4567-..."
+                className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#1A1A1A] text-white text-sm placeholder-[#4A5568] focus:outline-none focus:border-[#A68B5B] transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-[#718096] uppercase tracking-wider mb-2">
                 Email
               </label>
               <input
@@ -232,6 +242,7 @@ export function SubcontractorPortalPage() {
                 setToken("");
                 setProfile(null);
                 setTasks([]);
+                setTenantId("");
                 setEmail("");
                 setAccessToken("");
               }}
