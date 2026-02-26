@@ -153,3 +153,75 @@ export const documentApi = {
     api.patch(`/documents/${id}`, data),
   delete: (id: string) => api.delete(`/documents/${id}`),
 };
+
+// Inspection API
+export const inspectionApi = {
+  listByProject: (projectId: string, params?: Record<string, string>) =>
+    api.get(`/inspections/projects/${projectId}`, { params }),
+  get: (id: string) => api.get(`/inspections/${id}`),
+  create: (data: Record<string, unknown>) => api.post("/inspections", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/inspections/${id}`, data),
+  complete: (id: string, data: Record<string, unknown>) =>
+    api.post(`/inspections/${id}/complete`, data),
+  delete: (id: string) => api.delete(`/inspections/${id}`),
+};
+
+// Punch List API
+export const punchListApi = {
+  listByProject: (projectId: string, params?: Record<string, string>) =>
+    api.get(`/punch-list/projects/${projectId}`, { params }),
+  get: (id: string) => api.get(`/punch-list/${id}`),
+  create: (data: Record<string, unknown>) => api.post("/punch-list", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/punch-list/${id}`, data),
+  resolve: (id: string, data: { resolution: string }) =>
+    api.post(`/punch-list/${id}/resolve`, data),
+  verify: (id: string) => api.post(`/punch-list/${id}/verify`),
+  delete: (id: string) => api.delete(`/punch-list/${id}`),
+};
+
+// Safety Incident API
+export const safetyIncidentApi = {
+  list: (params?: Record<string, string>) =>
+    api.get("/safety-incidents", { params }),
+  listByProject: (projectId: string, params?: Record<string, string>) =>
+    api.get(`/safety-incidents/projects/${projectId}`, { params }),
+  get: (id: string) => api.get(`/safety-incidents/${id}`),
+  create: (data: Record<string, unknown>) =>
+    api.post("/safety-incidents", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/safety-incidents/${id}`, data),
+  investigate: (id: string) => api.post(`/safety-incidents/${id}/investigate`),
+  resolve: (id: string, data: Record<string, unknown>) =>
+    api.post(`/safety-incidents/${id}/resolve`, data),
+  delete: (id: string) => api.delete(`/safety-incidents/${id}`),
+};
+
+// Change Order API
+export const changeOrderApi = {
+  listByProject: (projectId: string, params?: Record<string, string>) =>
+    api.get(`/change-orders/projects/${projectId}`, { params }),
+  get: (id: string) => api.get(`/change-orders/${id}`),
+  create: (data: Record<string, unknown>) => api.post("/change-orders", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/change-orders/${id}`, data),
+  submit: (id: string) => api.post(`/change-orders/${id}/submit`),
+  approve: (id: string, data?: { approvedCost?: number }) =>
+    api.post(`/change-orders/${id}/approve`, data || {}),
+  reject: (id: string, data: { reason: string }) =>
+    api.post(`/change-orders/${id}/reject`, data),
+  addItem: (id: string, data: Record<string, unknown>) =>
+    api.post(`/change-orders/${id}/items`, data),
+  removeItem: (id: string, itemId: string) =>
+    api.delete(`/change-orders/${id}/items/${itemId}`),
+  delete: (id: string) => api.delete(`/change-orders/${id}`),
+};
+
+// Progress Report API
+export const progressReportApi = {
+  weekly: (projectId: string, params?: Record<string, string>) =>
+    api.get(`/reports/projects/${projectId}/weekly`, { params }),
+  monthly: (projectId: string, params?: Record<string, string>) =>
+    api.get(`/reports/projects/${projectId}/monthly`, { params }),
+};
