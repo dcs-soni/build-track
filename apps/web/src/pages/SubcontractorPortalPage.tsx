@@ -41,6 +41,9 @@ export function SubcontractorPortalPage() {
   const [accessToken, setAccessToken] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [inFlightUpdates, setInFlightUpdates] = useState<
+    Record<string, boolean>
+  >({});
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -79,7 +82,20 @@ export function SubcontractorPortalPage() {
     }
   };
 
-  const updateProgress = async (taskId: string, progressPercent: number) => {
+  const updateProgressLocal = (taskId: string, progressPercent: number) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, progressPercent } : t)),
+    );
+  };
+
+  const commitProgressUpdate = async (
+    taskId: string,
+    progressPercent: number,
+  ) => {
+    // Prevent overlapping updates for the same task
+    if (inFlightUpdates[taskId]) return;
+
+    setInFlightUpdates((prev) => ({ ...prev, [taskId]: true }));
     try {
       const res = await fetch(
         `${API_BASE}/sub-portal/tasks/${taskId}/progress`,
@@ -104,6 +120,8 @@ export function SubcontractorPortalPage() {
       }
     } catch {
       // Silently handle
+    } finally {
+      setInFlightUpdates((prev) => ({ ...prev, [taskId]: false }));
     }
   };
 
@@ -319,9 +337,18 @@ export function SubcontractorPortalPage() {
                         step="5"
                         value={task.progressPercent}
                         onChange={(e) =>
-                          updateProgress(task.id, Number(e.target.value))
+                          updateProgressLocal(task.id, Number(e.target.value))
                         }
-                        disabled={task.status === "completed"}
+                        onMouseUp={() =>
+                          commitProgressUpdate(task.id, task.progressPercent)
+                        }
+                        onTouchEnd={() =>
+                          commitProgressUpdate(task.id, task.progressPercent)
+                        }
+                        disabled={
+                          task.status === "completed" ||
+                          inFlightUpdates[task.id]
+                        }
                         className="w-full h-1.5 accent-[#A68B5B] bg-[#1A1A1A] rounded-full cursor-pointer disabled:opacity-50"
                       />
                     </div>
