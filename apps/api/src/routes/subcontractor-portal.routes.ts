@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import * as argon2 from "argon2";
 
 // ─── Zod Schemas ─────────────────────────────────────────────────────────────
 
@@ -13,6 +14,27 @@ const updateProgressSchema = z.object({
   notes: z.string().optional(),
 });
 
+// Pre-computed dummy hash so argon2.verify always runs, preventing timing-based
+// subcontractor enumeration. Same pattern used in auth.routes.ts.
+const DUMMY_PORTAL_HASH =
+  "$argon2id$v=19$m=65536,t=3,p=4$c29tZXJhbmRvbXNhbHQ$YXJnb24yaWRoYXNob3V0cHV0Zm9yZHVtbXk";
+
+/**
+ * Verifies a plaintext portal secret against a stored argon2 hash.
+ * Always runs the full argon2 computation to prevent timing attacks.
+ */
+async function verifyPortalSecret(
+  plainSecret: string,
+  storedHash: string | null,
+): Promise<boolean> {
+  const hashToCheck = storedHash ?? DUMMY_PORTAL_HASH;
+  try {
+    return await argon2.verify(hashToCheck, plainSecret);
+  } catch {
+    return false;
+  }
+}
+
 // ─── Route Plugin ────────────────────────────────────────────────────────────
 // This is registered OUTSIDE the main auth guard since subcontractors
 // have their own authentication via access tokens.
@@ -20,11 +42,11 @@ const updateProgressSchema = z.object({
 export const subcontractorPortalRoutes: FastifyPluginAsync = async (
   fastify,
 ) => {
-  // Login — validates subcontractor access via email + access token
+  // Login — validates subcontractor access via email + hashed portal secret
   fastify.post("/auth/login", async (request, reply) => {
     const body = loginSchema.parse(request.body);
 
-    // Find subcontractor by email and validate access token
+    // Find subcontractor by email
     const subcontractor = await fastify.prisma.subcontractor.findFirst({
       where: {
         email: body.email,
@@ -33,6 +55,8 @@ export const subcontractorPortalRoutes: FastifyPluginAsync = async (
     });
 
     if (!subcontractor) {
+      // Run a dummy verify to prevent timing-based enumeration
+      await verifyPortalSecret(body.accessToken, null);
       return reply.status(401).send({
         success: false,
         error: {
@@ -42,17 +66,25 @@ export const subcontractorPortalRoutes: FastifyPluginAsync = async (
       });
     }
 
-    // For the portal, we use a simple token-based access check.
-    // The token is the tenantId + subcontractorId encoding for simplicity.
-    // In production, this would use proper hashed tokens.
-    const expectedToken = `${subcontractor.tenantId}-${subcontractor.id}`.slice(
-      0,
-      36,
+    // Reject immediately if the subcontractor has no portal secret configured
+    if (!subcontractor.portalSecretHash) {
+      return reply.status(401).send({
+        success: false,
+        error: {
+          code: "PORTAL_NOT_CONFIGURED",
+          message:
+            "Portal access has not been configured for this subcontractor",
+        },
+      });
+    }
+
+    // Securely verify the provided access token against the stored hash
+    const isValid = await verifyPortalSecret(
+      body.accessToken,
+      subcontractor.portalSecretHash,
     );
-    if (
-      body.accessToken !== expectedToken &&
-      body.accessToken !== subcontractor.id
-    ) {
+
+    if (!isValid) {
       return reply.status(401).send({
         success: false,
         error: {

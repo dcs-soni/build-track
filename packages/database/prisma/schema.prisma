@@ -442,6 +442,9 @@ model Subcontractor {
   completedJobs   Int       @default(0)
   onTimePercent   Decimal?  @db.Decimal(5, 2)
   
+  // Portal access
+  portalSecretHash String?  @db.VarChar(255) // Argon2 hash of the portal access secret
+
   // Documents
   w9Url           String?   @db.VarChar(500)
   insuranceCertUrl String?  @db.VarChar(500)
