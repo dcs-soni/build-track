@@ -27,7 +27,12 @@ const createPunchListSchema = z.object({
   room: z.string().max(100).optional(),
   drawingRef: z.string().max(255).optional(),
   assignedToId: z.string().uuid().optional(),
-  dueDate: z.string().optional(),
+  dueDate: z
+    .string()
+    .optional()
+    .refine((v) => v === undefined || !Number.isNaN(Date.parse(v)), {
+      message: "Invalid date string",
+    }),
   notes: z.string().optional(),
   photoUrls: z.array(z.string().url()).optional(),
 });
@@ -45,12 +50,29 @@ const resolveSchema = z.object({
   resolution: z.string().min(1),
 });
 
+const getPunchListQuerySchema = z.object({
+  status: z
+    .enum(["open", "in_progress", "resolved", "verified", "wont_fix"])
+    .optional(),
+  priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+});
+
 export const punchListRoutes: FastifyPluginAsync = async (fastify) => {
   // List punch list items for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
     const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
-    const { status, priority } = request.query as Record<string, string>;
+    const queryResult = getPunchListQuerySchema.safeParse(request.query);
+    if (!queryResult.success) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Invalid query parameters",
+        },
+      });
+    }
+    const { status, priority } = queryResult.data;
 
     const items = await fastify.prisma.punchListItem.findMany({
       where: {
