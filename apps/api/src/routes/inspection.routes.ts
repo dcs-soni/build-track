@@ -23,7 +23,9 @@ const createInspectionSchema = z.object({
   inspectorId: z.string().uuid().optional(),
   inspectorName: z.string().max(255).optional(),
   inspectorCompany: z.string().max(255).optional(),
-  scheduledDate: z.string(), // ISO date
+  scheduledDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: "Invalid date string",
+  }), // ISO date
   scheduledTime: z.string().max(20).optional(),
   location: z.string().max(255).optional(),
   drawingRef: z.string().max(255).optional(),
@@ -67,12 +69,48 @@ const completeInspectionSchema = z.object({
   delayDays: z.number().int().optional(),
 });
 
+const getInspectionsQuerySchema = z.object({
+  status: z
+    .enum([
+      "scheduled",
+      "in_progress",
+      "passed",
+      "failed",
+      "needs_reinspection",
+      "cancelled",
+    ])
+    .optional(),
+  type: z
+    .enum([
+      "structural",
+      "electrical",
+      "plumbing",
+      "fire_safety",
+      "hvac",
+      "roofing",
+      "foundation",
+      "final",
+      "other",
+    ])
+    .optional(),
+});
+
 export const inspectionRoutes: FastifyPluginAsync = async (fastify) => {
   // List inspections for a project
   fastify.get("/projects/:projectId", async (request, reply) => {
     const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
-    const { status, type } = request.query as Record<string, string>;
+    const queryResult = getInspectionsQuerySchema.safeParse(request.query);
+    if (!queryResult.success) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Invalid query parameters",
+        },
+      });
+    }
+    const { status, type } = queryResult.data;
 
     const inspections = await fastify.prisma.inspection.findMany({
       where: {
@@ -201,7 +239,12 @@ export const inspectionRoutes: FastifyPluginAsync = async (fastify) => {
     const tenantId = request.tenantId;
     const body = completeInspectionSchema.parse(request.body);
 
-    const status = body.result === "fail" ? "failed" : "passed";
+    const status =
+      body.result === "fail"
+        ? "failed"
+        : body.result === "conditional_pass"
+          ? "needs_reinspection"
+          : "passed";
 
     const result = await fastify.prisma.inspection.updateMany({
       where: {
