@@ -18,7 +18,9 @@ const createIncidentSchema = z.object({
     "environmental",
   ]),
   severity: z.enum(["low", "medium", "high", "critical"]).optional(),
-  incidentDate: z.string(), // ISO date
+  incidentDate: z.string().refine((s) => !Number.isNaN(Date.parse(s)), {
+    message: "Invalid date",
+  }), // ISO date
   incidentTime: z.string().max(20).optional(),
   location: z.string().max(255).optional(),
   weather: z.string().max(50).optional(),
@@ -53,11 +55,38 @@ const resolveIncidentSchema = z.object({
   preventiveAction: z.string().optional(),
 });
 
+const getSafetyIncidentsQuerySchema = z.object({
+  status: z
+    .enum(["reported", "investigating", "resolved", "closed"])
+    .optional(),
+  severity: z.enum(["low", "medium", "high", "critical"]).optional(),
+  type: z
+    .enum([
+      "near_miss",
+      "first_aid",
+      "recordable",
+      "lost_time",
+      "property_damage",
+      "environmental",
+    ])
+    .optional(),
+});
+
 export const safetyIncidentRoutes: FastifyPluginAsync = async (fastify) => {
   // List all incidents across projects (safety dashboard)
   fastify.get("/", async (request, reply) => {
     const tenantId = request.tenantId;
-    const { status, severity, type } = request.query as Record<string, string>;
+    const queryResult = getSafetyIncidentsQuerySchema.safeParse(request.query);
+    if (!queryResult.success) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Invalid query parameters",
+        },
+      });
+    }
+    const { status, severity, type } = queryResult.data;
 
     const incidents = await fastify.prisma.safetyIncident.findMany({
       where: {
@@ -81,7 +110,17 @@ export const safetyIncidentRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/projects/:projectId", async (request, reply) => {
     const { projectId } = projectIdParamSchema.parse(request.params);
     const tenantId = request.tenantId;
-    const { status, severity } = request.query as Record<string, string>;
+    const queryResult = getSafetyIncidentsQuerySchema.safeParse(request.query);
+    if (!queryResult.success) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Invalid query parameters",
+        },
+      });
+    }
+    const { status, severity } = queryResult.data;
 
     const incidents = await fastify.prisma.safetyIncident.findMany({
       where: {
@@ -147,11 +186,13 @@ export const safetyIncidentRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    // Auto-generate incident number
-    const count = await fastify.prisma.safetyIncident.count({
+    // Auto-generate incident number using atomic counter
+    const counter = await fastify.prisma.projectIncidentCounter.upsert({
       where: { projectId: body.projectId },
+      update: { seq: { increment: 1 } },
+      create: { projectId: body.projectId, seq: 1 },
     });
-    const incidentNumber = `SI-${String(count + 1).padStart(3, "0")}`;
+    const incidentNumber = `SI-${String(counter.seq).padStart(3, "0")}`;
 
     const incident = await fastify.prisma.safetyIncident.create({
       data: {
