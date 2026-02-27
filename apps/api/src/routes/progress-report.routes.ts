@@ -7,20 +7,47 @@ import { projectIdParamSchema } from "../schemas/common.schema.js";
 const weeklyQuerySchema = z.object({
   weekStart: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, expected YYYY-MM-DD")
+    .optional()
+    .transform((val) => {
+      if (!val) return undefined;
+      const parts = val.split("-");
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const date = new Date(year, month, day);
+      if (
+        date.getFullYear() !== year ||
+        date.getMonth() !== month ||
+        date.getDate() !== day
+      ) {
+        throw new Error("Invalid date");
+      }
+      return date;
+    }),
 });
 
 const monthlyQuerySchema = z.object({
   month: z
     .string()
-    .regex(/^\d{4}-\d{2}$/)
-    .optional(),
+    .regex(/^\d{4}-\d{2}$/, "Invalid month format, expected YYYY-MM")
+    .optional()
+    .transform((val) => {
+      if (!val) return undefined;
+      const parts = val.split("-");
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const date = new Date(year, month, 1);
+      if (date.getFullYear() !== year || date.getMonth() !== month) {
+        throw new Error("Invalid month");
+      }
+      return date;
+    }),
 });
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getWeekRange(weekStart?: string) {
+function getWeekRange(weekStart?: Date) {
   const start = weekStart ? new Date(weekStart) : new Date();
   // Align to Monday
   const day = start.getDay();
@@ -35,12 +62,10 @@ function getWeekRange(weekStart?: string) {
   return { start, end };
 }
 
-function getMonthRange(monthStr?: string) {
+function getMonthRange(monthStart?: Date) {
   const now = new Date();
-  const year = monthStr ? parseInt(monthStr.split("-")[0]) : now.getFullYear();
-  const month = monthStr
-    ? parseInt(monthStr.split("-")[1]) - 1
-    : now.getMonth();
+  const year = monthStart ? monthStart.getFullYear() : now.getFullYear();
+  const month = monthStart ? monthStart.getMonth() : now.getMonth();
 
   const start = new Date(year, month, 1);
   const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
