@@ -14,6 +14,7 @@ import {
   HardHat,
   Receipt,
   FolderOpen,
+  ShieldAlert,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +29,7 @@ const navItems = [
   { to: "/budget-analytics", icon: BarChart3, label: "Analytics" },
   { to: "/subcontractors", icon: Briefcase, label: "Contractors" },
   { to: "/daily-reports", icon: FileText, label: "Reports" },
+  { to: "/safety-incidents", icon: ShieldAlert, label: "Safety" },
   { to: "/activity", icon: Clock, label: "Activity" },
   { to: "/notifications", icon: Bell, label: "Notifications" },
 ];

@@ -37,9 +37,10 @@
   "pnpm": {
     "overrides": {
       "tar": "^7.5.8",
-      "minimatch": "^10.2.1",
+      "minimatch": "^10.2.3",
       "fastify": "^5.7.2",
-      "axios": "^1.13.5"
+      "axios": "^1.13.5",
+      "rollup": "^4.59.0"
     }
   }
 }

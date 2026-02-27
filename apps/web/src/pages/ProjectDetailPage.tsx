@@ -180,6 +180,24 @@ export function ProjectDetailPage() {
           >
             Timeline <ArrowUpRight className="h-3 w-3" />
           </Link>
+          <Link
+            to={`/projects/${id}/inspections`}
+            className="text-xs text-[#4A5568] hover:text-[#A68B5B] transition-colors flex items-center gap-1 tracking-wide uppercase"
+          >
+            Inspections <ArrowUpRight className="h-3 w-3" />
+          </Link>
+          <Link
+            to={`/projects/${id}/punch-list`}
+            className="text-xs text-[#4A5568] hover:text-[#A68B5B] transition-colors flex items-center gap-1 tracking-wide uppercase"
+          >
+            Punch List <ArrowUpRight className="h-3 w-3" />
+          </Link>
+          <Link
+            to={`/projects/${id}/safety-incidents`}
+            className="text-xs text-[#4A5568] hover:text-[#A68B5B] transition-colors flex items-center gap-1 tracking-wide uppercase"
+          >
+            Safety <ArrowUpRight className="h-3 w-3" />
+          </Link>
         </div>
       </div>
 

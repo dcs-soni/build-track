@@ -48,12 +48,10 @@ export const subcontractorPortalRoutes: FastifyPluginAsync = async (
     const body = loginSchema.parse(request.body);
 
     // Find subcontractor deterministically by uniquely identifying tenantId + email
-    const subcontractor = await fastify.prisma.subcontractor.findUnique({
+    const subcontractor = await fastify.prisma.subcontractor.findFirst({
       where: {
-        tenantId_email: {
-          tenantId: body.tenantId,
-          email: body.email,
-        },
+        tenantId: body.tenantId,
+        email: body.email,
       },
     });
 
