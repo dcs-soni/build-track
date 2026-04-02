@@ -9,8 +9,15 @@ import {
   CheckCircle2,
   Clock,
   ArrowUpRight,
+  Copy,
+  Check,
+  Link2,
 } from "lucide-react";
-import { projectUpdatesApi, projectsApi } from "@/lib/api";
+import {
+  clientPortalApi,
+  projectUpdatesApi,
+  projectsApi,
+} from "@/lib/api";
 import { formatCurrency, formatDate } from "@buildtrack/shared";
 import type { LucideIcon } from "lucide-react";
 import type { AxiosError } from "axios";
@@ -33,6 +40,11 @@ interface UpdateItem {
   author?: { name: string };
 }
 
+interface ClientPortalResponse {
+  accessToken: string;
+  portalUrl: string;
+}
+
 const TASK_STATUS_COLORS: Record<string, string> = {
   completed: "bg-[#4A9079]",
   in_progress: "bg-[#A68B5B]",
@@ -42,6 +54,8 @@ const TASK_STATUS_COLORS: Record<string, string> = {
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [showUpdateForm, setShowUpdateForm] = useState(false);
+  const [portalLink, setPortalLink] = useState<string | null>(null);
+  const [portalLinkCopied, setPortalLinkCopied] = useState(false);
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
@@ -62,6 +76,39 @@ export function ProjectDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-updates", id] });
       setShowUpdateForm(false);
+    },
+  });
+
+  const enablePortalMutation = useMutation({
+    mutationFn: async (): Promise<ClientPortalResponse> => {
+      const response = await clientPortalApi.enable(id!);
+      return response.data.data;
+    },
+    onSuccess: (response: ClientPortalResponse) => {
+      queryClient.invalidateQueries({ queryKey: ["project", id] });
+      setPortalLink(response.portalUrl);
+      setPortalLinkCopied(false);
+    },
+  });
+
+  const regeneratePortalMutation = useMutation({
+    mutationFn: async (): Promise<ClientPortalResponse> => {
+      const response = await clientPortalApi.regenerate(id!);
+      return response.data.data;
+    },
+    onSuccess: (response: ClientPortalResponse) => {
+      queryClient.invalidateQueries({ queryKey: ["project", id] });
+      setPortalLink(response.portalUrl);
+      setPortalLinkCopied(false);
+    },
+  });
+
+  const disablePortalMutation = useMutation({
+    mutationFn: () => clientPortalApi.disable(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", id] });
+      setPortalLink(null);
+      setPortalLinkCopied(false);
     },
   });
 
@@ -105,6 +152,17 @@ export function ProjectDetailPage() {
     on_hold: "bg-[#9E534F]/20 text-[#D4796E]",
     completed: "bg-[#4A9079]/20 text-[#4A9079]",
     cancelled: "bg-[#9E534F]/20 text-[#9E534F]",
+  };
+
+  const copyPortalLink = async () => {
+    if (!portalLink) return;
+
+    try {
+      await navigator.clipboard.writeText(portalLink);
+      setPortalLinkCopied(true);
+    } catch {
+      setPortalLinkCopied(false);
+    }
   };
 
   return (
@@ -264,6 +322,89 @@ export function ProjectDetailPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Project Updates */}
+      <div className="bg-[#0A0A0A] border border-[#1A1A1A] mt-6">
+        <div className="p-6 border-b border-[#1A1A1A] flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-medium text-white">Client Portal</h2>
+            <p className="text-xs text-[#4A5568] mt-1">
+              Generate a secure read-only project link for clients.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {project.clientAccessEnabled ? (
+              <>
+                <button
+                  onClick={() => regeneratePortalMutation.mutate()}
+                  disabled={regeneratePortalMutation.isPending}
+                  className="px-4 py-2 text-xs tracking-[0.1em] uppercase border border-[#1A1A1A] text-[#A68B5B] hover:border-[#A68B5B]/40 transition-colors disabled:opacity-50"
+                >
+                  {regeneratePortalMutation.isPending
+                    ? "Regenerating..."
+                    : "Regenerate Link"}
+                </button>
+                <button
+                  onClick={() => disablePortalMutation.mutate()}
+                  disabled={disablePortalMutation.isPending}
+                  className="px-4 py-2 text-xs tracking-[0.1em] uppercase border border-[#1A1A1A] text-[#D4796E] hover:border-[#9E534F] transition-colors disabled:opacity-50"
+                >
+                  {disablePortalMutation.isPending
+                    ? "Disabling..."
+                    : "Disable Access"}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => enablePortalMutation.mutate()}
+                disabled={enablePortalMutation.isPending}
+                className="px-4 py-2 text-xs tracking-[0.1em] uppercase border border-[#A68B5B] text-[#A68B5B] hover:bg-[#A68B5B] hover:text-[#0A0A0A] transition-all duration-300 disabled:opacity-50"
+              >
+                {enablePortalMutation.isPending
+                  ? "Enabling..."
+                  : "Enable Client Access"}
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="p-6">
+          {portalLink ? (
+            <>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-white">Fresh client link ready</p>
+                  <p className="text-xs text-[#4A5568] mt-1">
+                    Share this URL directly with the client.
+                  </p>
+                </div>
+                <button
+                  onClick={copyPortalLink}
+                  className="inline-flex items-center gap-2 px-3 py-2 border border-[#A68B5B]/30 text-[#A68B5B] text-xs uppercase tracking-[0.1em] hover:bg-[#A68B5B]/10 transition-colors"
+                >
+                  {portalLinkCopied ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                  {portalLinkCopied ? "Copied" : "Copy Link"}
+                </button>
+              </div>
+              <div className="mt-3 flex items-center gap-2 border border-[#1A1A1A] bg-[#111111] px-3 py-2 text-xs text-[#E1E1E1]">
+                <Link2 className="h-3.5 w-3.5 text-[#A68B5B]" />
+                <span className="truncate">{portalLink}</span>
+              </div>
+            </>
+          ) : project.clientAccessEnabled ? (
+            <p className="text-sm text-[#718096]">
+              Client access is enabled. Regenerate the link to issue a new URL.
+            </p>
+          ) : (
+            <p className="text-sm text-[#718096]">
+              Client access is currently disabled for this project.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Project Updates */}

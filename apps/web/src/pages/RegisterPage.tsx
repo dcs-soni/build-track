@@ -27,8 +27,8 @@ export function RegisterPage() {
   const registerMutation = useMutation({
     mutationFn: (data: RegisterForm) => authApi.register(data),
     onSuccess: (response) => {
-      const { user, tokens } = response.data.data;
-      setAuth(user, tokens);
+      const { user, tokens, tenantId } = response.data.data;
+      setAuth(user, tokens, tenantId);
       navigate("/dashboard");
     },
     onError: (error: unknown) => {

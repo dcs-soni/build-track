@@ -9,18 +9,6 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { api } from "@/lib/api";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 
 const COLORS = [
   "#A68B5B",
@@ -31,6 +19,18 @@ const COLORS = [
   "#C4786B",
   "#4A5568",
 ];
+
+type CategoryDatum = {
+  name: string;
+  estimated: number;
+  actual: number;
+  variance: number;
+};
+
+type TrendDatum = {
+  date: string;
+  amount: number;
+};
 
 export function BudgetAnalyticsPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -77,7 +77,7 @@ export function BudgetAnalyticsPage() {
     estimated: data.estimated,
     actual: data.actual,
     variance: data.variance,
-  }));
+  })) as CategoryDatum[];
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -138,36 +138,7 @@ export function BudgetAnalyticsPage() {
             Budget by Category
           </h3>
           {categoryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  dataKey="estimated"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                  stroke="#1A1A1A"
-                >
-                  {categoryData.map((_, index) => (
-                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  contentStyle={{
-                    backgroundColor: "#111111",
-                    border: "1px solid #1A1A1A",
-                    color: "#E1E1E1",
-                    borderRadius: 0,
-                  }}
-                  labelStyle={{ color: "#A68B5B" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <CategoryDonutChart data={categoryData} />
           ) : (
             <div className="h-[300px] flex items-center justify-center text-[#4A5568] text-sm">
               No category data
@@ -181,35 +152,7 @@ export function BudgetAnalyticsPage() {
             Estimated vs Actual
           </h3>
           {categoryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={categoryData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 12, fill: "#4A5568" }}
-                  axisLine={{ stroke: "#1A1A1A" }}
-                  tickLine={{ stroke: "#1A1A1A" }}
-                />
-                <YAxis
-                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                  tick={{ fontSize: 12, fill: "#4A5568" }}
-                  axisLine={{ stroke: "#1A1A1A" }}
-                  tickLine={{ stroke: "#1A1A1A" }}
-                />
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  contentStyle={{
-                    backgroundColor: "#111111",
-                    border: "1px solid #1A1A1A",
-                    color: "#E1E1E1",
-                    borderRadius: 0,
-                  }}
-                  labelStyle={{ color: "#A68B5B" }}
-                />
-                <Bar dataKey="estimated" fill="#2A2A2A" name="Estimated" />
-                <Bar dataKey="actual" fill="#A68B5B" name="Actual" />
-              </BarChart>
-            </ResponsiveContainer>
+            <CategoryComparisonChart data={categoryData} />
           ) : (
             <div className="h-[300px] flex items-center justify-center text-[#4A5568] text-sm">
               No comparison data
@@ -224,34 +167,7 @@ export function BudgetAnalyticsPage() {
           <h3 className="text-sm font-medium text-white mb-6">
             Daily Spending (Last 30 Days)
           </h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={spendingTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 10, fill: "#4A5568" }}
-                axisLine={{ stroke: "#1A1A1A" }}
-                tickLine={{ stroke: "#1A1A1A" }}
-              />
-              <YAxis
-                tickFormatter={(v) => `$${v}`}
-                tick={{ fontSize: 12, fill: "#4A5568" }}
-                axisLine={{ stroke: "#1A1A1A" }}
-                tickLine={{ stroke: "#1A1A1A" }}
-              />
-              <Tooltip
-                formatter={(value: number) => formatCurrency(value)}
-                contentStyle={{
-                  backgroundColor: "#111111",
-                  border: "1px solid #1A1A1A",
-                  color: "#E1E1E1",
-                  borderRadius: 0,
-                }}
-                labelStyle={{ color: "#A68B5B" }}
-              />
-              <Bar dataKey="amount" fill="#4A9079" />
-            </BarChart>
-          </ResponsiveContainer>
+          <TrendBarChart data={spendingTrend as TrendDatum[]} />
         </div>
       )}
 
@@ -291,6 +207,154 @@ export function BudgetAnalyticsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function CategoryDonutChart({ data }: { data: CategoryDatum[] }) {
+  const total = data.reduce((sum, item) => sum + item.estimated, 0);
+  let offset = 0;
+  const gradientStops = data
+    .map((item, index) => {
+      const percentage = total > 0 ? (item.estimated / total) * 100 : 0;
+      const start = offset;
+      const end = offset + percentage;
+      offset = end;
+      return `${COLORS[index % COLORS.length]} ${start}% ${end}%`;
+    })
+    .join(", ");
+
+  return (
+    <div className="grid md:grid-cols-[180px_1fr] gap-6 items-center min-h-[300px]">
+      <div className="flex items-center justify-center">
+        <div
+          className="relative h-40 w-40 rounded-full border border-[#1A1A1A]"
+          style={{
+            backgroundImage: `conic-gradient(${gradientStops || "#2A2A2A 0 100%"})`,
+          }}
+        >
+          <div className="absolute inset-6 bg-[#0A0A0A] rounded-full border border-[#1A1A1A] flex flex-col items-center justify-center">
+            <span className="text-[10px] uppercase tracking-[0.18em] text-[#4A5568]">
+              Total
+            </span>
+            <span className="mt-2 text-sm text-white font-medium text-center px-3">
+              {formatCurrency(total)}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {data.map((item, index) => {
+          const share = total > 0 ? Math.round((item.estimated / total) * 100) : 0;
+          return (
+            <div
+              key={item.name}
+              className="border border-[#1A1A1A] bg-[#111111] p-3"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span
+                    className="h-3 w-3"
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  />
+                  <span className="text-sm text-white">{item.name}</span>
+                </div>
+                <span className="text-xs tracking-[0.15em] text-[#A68B5B] uppercase">
+                  {share}%
+                </span>
+              </div>
+              <div className="mt-2 text-xs text-[#718096]">
+                Planned {formatCurrency(item.estimated)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CategoryComparisonChart({ data }: { data: CategoryDatum[] }) {
+  const maxValue = Math.max(
+    ...data.flatMap((item) => [item.estimated, item.actual]),
+    1,
+  );
+
+  return (
+    <div className="space-y-4 min-h-[300px]">
+      {data.map((item) => (
+        <div key={item.name} className="border border-[#1A1A1A] bg-[#111111] p-4">
+          <div className="flex items-center justify-between gap-4 text-sm">
+            <span className="text-white">{item.name}</span>
+            <span className="text-[#718096]">{formatCurrency(item.actual)}</span>
+          </div>
+          <div className="mt-3 space-y-2">
+            <MetricBar
+              label="Estimated"
+              value={item.estimated}
+              maxValue={maxValue}
+              color="#2A2A2A"
+            />
+            <MetricBar
+              label="Actual"
+              value={item.actual}
+              maxValue={maxValue}
+              color="#A68B5B"
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TrendBarChart({ data }: { data: TrendDatum[] }) {
+  const maxAmount = Math.max(...data.map((item) => item.amount), 1);
+
+  return (
+    <div className="h-[200px] flex items-end gap-2 border border-[#1A1A1A] bg-[#111111] p-4 overflow-hidden">
+      {data.map((item) => (
+        <div key={item.date} className="flex-1 min-w-0 flex flex-col items-center justify-end gap-2">
+          <div
+            className="w-full bg-[#4A9079] min-h-[6px]"
+            style={{ height: `${Math.max((item.amount / maxAmount) * 140, 6)}px` }}
+            title={`${item.date}: ${formatCurrency(item.amount)}`}
+          />
+          <span className="text-[10px] text-[#4A5568]">
+            {item.date.slice(5)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MetricBar({
+  label,
+  value,
+  maxValue,
+  color,
+}: {
+  label: string;
+  value: number;
+  maxValue: number;
+  color: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-4 text-[11px] uppercase tracking-[0.12em] text-[#4A5568] mb-1">
+        <span>{label}</span>
+        <span>{formatCurrency(value)}</span>
+      </div>
+      <div className="h-2 bg-[#0A0A0A] overflow-hidden">
+        <div
+          className="h-full"
+          style={{
+            width: `${Math.max((value / maxValue) * 100, value > 0 ? 4 : 0)}%`,
+            backgroundColor: color,
+          }}
+        />
+      </div>
     </div>
   );
 }

@@ -84,6 +84,7 @@ export interface Project {
   createdBy?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  clientAccessEnabled?: boolean;
 }
 
 export interface ProjectSummary {

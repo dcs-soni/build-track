@@ -1,12 +1,11 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import * as argon2 from "argon2";
-import crypto from "crypto";
-import { createHash } from "crypto";
 import rateLimit from "@fastify/rate-limit";
 import { RateLimiter } from "../utils/rate-limiter.util.js";
 import { TTLCache } from "../utils/cache.util.js";
 import type { Prisma } from "@buildtrack/database";
+import { hashToken, issueRefreshToken } from "../utils/token.util.js";
 
 const loginBruteForceLimiter = new RateLimiter(5, 5 * 60 * 1000); // 5 attempts per 5 minutes per IP
 
@@ -34,6 +33,38 @@ const loginSchema = z.object({
 // so that argon2.verify() runs its full computation without throwing.
 const DUMMY_PASSWORD_HASH =
   "$argon2id$v=19$m=65536,t=3,p=4$c29tZXJhbmRvbXNhbHQ$YXJnb24yaWRoYXNob3V0cHV0Zm9yZHVtbXk";
+
+function slugifyTenantName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+async function generateUniqueTenantSlug(
+  fastify: {
+    prisma: {
+      tenant: {
+        findUnique: (args: { where: { slug: string } }) => Promise<{
+          id: string;
+        } | null>;
+      };
+    };
+  },
+  seed: string,
+): Promise<string> {
+  const baseSlug = slugifyTenantName(seed) || "workspace";
+  let slug = baseSlug;
+  let suffix = 1;
+
+  while (await fastify.prisma.tenant.findUnique({ where: { slug } })) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  return slug;
+}
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Scoped rate limit for auth routes (conservative default)
@@ -76,9 +107,10 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       // Create default tenant
-      const tenantSlug = tenantName
-        ? tenantName.toLowerCase().replace(/\s+/g, "-")
-        : `${name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
+      const tenantSlug = await generateUniqueTenantSlug(
+        fastify,
+        tenantName || `${name} workspace`,
+      );
 
       const tenant = await tx.tenant.create({
         data: { name: tenantName || `${name}'s Workspace`, slug: tenantSlug },
@@ -97,16 +129,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       { sub: result.user.id, tenantId: result.tenant.id },
       { expiresIn: process.env.JWT_EXPIRES_IN || "15m" },
     );
-    const refreshToken = crypto.randomBytes(64).toString("hex");
-
-    // Store refresh token
-    await fastify.prisma.refreshToken.create({
-      data: {
-        userId: result.user.id,
-        token: createHash("sha256").update(refreshToken).digest("hex"),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
-    });
+    const refreshToken = await issueRefreshToken(fastify.prisma, result.user.id);
 
     return reply.status(201).send({
       success: true,
@@ -116,6 +139,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           email: result.user.email,
           name: result.user.name,
         },
+        tenantId: result.tenant.id,
         tokens: { accessToken, refreshToken, expiresIn: 900 },
       },
     });
@@ -192,15 +216,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         { sub: user.id, tenantId: defaultMembership.tenantId },
         { expiresIn: process.env.JWT_EXPIRES_IN || "15m" },
       );
-      const refreshToken = crypto.randomBytes(64).toString("hex");
-
-      await fastify.prisma.refreshToken.create({
-        data: {
-          userId: user.id,
-          token: createHash("sha256").update(refreshToken).digest("hex"),
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        },
-      });
+      const refreshToken = await issueRefreshToken(fastify.prisma, user.id);
 
       // Update last login
       await fastify.prisma.user.update({
@@ -241,7 +257,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const storedToken = await fastify.prisma.refreshToken.findUnique({
-      where: { token: createHash("sha256").update(refreshToken).digest("hex") },
+      where: { token: hashToken(refreshToken) },
     });
 
     if (
@@ -292,15 +308,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       { sub: user.id, tenantId: defaultMembership.tenantId },
       { expiresIn: process.env.JWT_EXPIRES_IN || "15m" },
     );
-    const newRefreshToken = crypto.randomBytes(64).toString("hex");
-
-    await fastify.prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        token: createHash("sha256").update(newRefreshToken).digest("hex"),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
-    });
+    const newRefreshToken = await issueRefreshToken(fastify.prisma, user.id);
 
     return reply.send({
       success: true,
