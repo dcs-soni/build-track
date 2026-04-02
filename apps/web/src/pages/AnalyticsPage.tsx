@@ -13,18 +13,6 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@buildtrack/shared";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
 
 const CATEGORY_COLORS: Record<string, string> = {
   labor: "#A68B5B",
@@ -81,6 +69,11 @@ interface RecentExpense {
   date: string;
   vendor: string | null;
   projectName: string;
+}
+
+interface ExpensePieDatum {
+  name: string;
+  value: number;
 }
 
 export function AnalyticsPage() {
@@ -142,7 +135,7 @@ export function AnalyticsPage() {
     .map((c) => ({
       name: c.category.charAt(0).toUpperCase() + c.category.slice(1),
       value: c.total,
-    }));
+    })) as ExpensePieDatum[];
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -197,38 +190,7 @@ export function AnalyticsPage() {
             Budget vs Actual by Category
           </h3>
           {budgetChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={budgetChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 11, fill: "#4A5568" }}
-                  axisLine={{ stroke: "#1A1A1A" }}
-                  tickLine={{ stroke: "#1A1A1A" }}
-                />
-                <YAxis
-                  tickFormatter={(v) =>
-                    v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
-                  }
-                  tick={{ fontSize: 11, fill: "#4A5568" }}
-                  axisLine={{ stroke: "#1A1A1A" }}
-                  tickLine={{ stroke: "#1A1A1A" }}
-                />
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  contentStyle={{
-                    backgroundColor: "#111111",
-                    border: "1px solid #1A1A1A",
-                    color: "#E1E1E1",
-                    borderRadius: 0,
-                    fontSize: 12,
-                  }}
-                  labelStyle={{ color: "#A68B5B" }}
-                />
-                <Bar dataKey="estimated" fill="#2A2A2A" name="Estimated" />
-                <Bar dataKey="actual" fill="#A68B5B" name="Actual" />
-              </BarChart>
-            </ResponsiveContainer>
+            <BudgetCategoryBars data={budgetChartData} />
           ) : (
             <EmptyChartState message="No budget categories to display" />
           )}
@@ -240,40 +202,7 @@ export function AnalyticsPage() {
             Expense Distribution
           </h3>
           {expensePieData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={expensePieData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  stroke="#1A1A1A"
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                >
-                  {expensePieData.map((_, index) => (
-                    <Cell
-                      key={index}
-                      fill={PIE_COLORS[index % PIE_COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
-                  contentStyle={{
-                    backgroundColor: "#111111",
-                    border: "1px solid #1A1A1A",
-                    color: "#E1E1E1",
-                    borderRadius: 0,
-                    fontSize: 12,
-                  }}
-                  labelStyle={{ color: "#A68B5B" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <ExpenseDonutChart data={expensePieData} />
           ) : (
             <EmptyChartState message="No expense data to display" />
           )}
@@ -423,6 +352,138 @@ export function AnalyticsPage() {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function BudgetCategoryBars({
+  data,
+}: {
+  data: Array<{ name: string; estimated: number; actual: number }>;
+}) {
+  const maxValue = Math.max(
+    ...data.flatMap((item) => [item.estimated, item.actual]),
+    1,
+  );
+
+  return (
+    <div className="space-y-4 min-h-[280px]">
+      {data.map((item) => (
+        <div key={item.name} className="border border-[#1A1A1A] bg-[#111111] p-4">
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <span className="text-sm text-white">{item.name}</span>
+            <span className="text-xs text-[#718096]">
+              {formatCurrency(item.actual)}
+            </span>
+          </div>
+          <DualBar
+            label="Estimated"
+            value={item.estimated}
+            maxValue={maxValue}
+            color="#2A2A2A"
+          />
+          <div className="mt-2" />
+          <DualBar
+            label="Actual"
+            value={item.actual}
+            maxValue={maxValue}
+            color="#A68B5B"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ExpenseDonutChart({ data }: { data: ExpensePieDatum[] }) {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  let offset = 0;
+  const gradient = data
+    .map((item, index) => {
+      const percentage = total > 0 ? (item.value / total) * 100 : 0;
+      const start = offset;
+      const end = offset + percentage;
+      offset = end;
+      return `${PIE_COLORS[index % PIE_COLORS.length]} ${start}% ${end}%`;
+    })
+    .join(", ");
+
+  return (
+    <div className="grid md:grid-cols-[180px_1fr] gap-6 items-center min-h-[280px]">
+      <div className="flex items-center justify-center">
+        <div
+          className="relative h-40 w-40 rounded-full border border-[#1A1A1A]"
+          style={{
+            backgroundImage: `conic-gradient(${gradient || "#2A2A2A 0 100%"})`,
+          }}
+        >
+          <div className="absolute inset-6 rounded-full bg-[#0A0A0A] border border-[#1A1A1A] flex flex-col items-center justify-center">
+            <span className="text-[10px] uppercase tracking-[0.18em] text-[#4A5568]">
+              Total
+            </span>
+            <span className="mt-2 text-sm text-white font-medium text-center px-3">
+              {formatCurrency(total)}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {data.map((item, index) => {
+          const percentage = total > 0 ? Math.round((item.value / total) * 100) : 0;
+          return (
+            <div
+              key={item.name}
+              className="border border-[#1A1A1A] bg-[#111111] p-3"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span
+                    className="h-3 w-3"
+                    style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                  />
+                  <span className="text-sm text-white">{item.name}</span>
+                </div>
+                <span className="text-xs tracking-[0.15em] text-[#A68B5B] uppercase">
+                  {percentage}%
+                </span>
+              </div>
+              <div className="mt-2 text-xs text-[#718096]">
+                {formatCurrency(item.value)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DualBar({
+  label,
+  value,
+  maxValue,
+  color,
+}: {
+  label: string;
+  value: number;
+  maxValue: number;
+  color: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-4 text-[11px] uppercase tracking-[0.12em] text-[#4A5568] mb-1">
+        <span>{label}</span>
+        <span>{formatCurrency(value)}</span>
+      </div>
+      <div className="h-2 bg-[#0A0A0A] overflow-hidden">
+        <div
+          className="h-full"
+          style={{
+            width: `${Math.max((value / maxValue) * 100, value > 0 ? 4 : 0)}%`,
+            backgroundColor: color,
+          }}
+        />
       </div>
     </div>
   );

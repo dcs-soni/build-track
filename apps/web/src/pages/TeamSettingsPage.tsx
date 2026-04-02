@@ -10,7 +10,7 @@ import {
   Check,
   Link2,
 } from "lucide-react";
-import { invitationsApi } from "@/lib/api";
+import { api } from "@/lib/api";
 
 interface InvitationItem {
   id: string;
@@ -36,17 +36,27 @@ export function TeamSettingsPage() {
 
   const { data: invitationsData, isLoading } = useQuery({
     queryKey: ["invitations"],
-    queryFn: () => invitationsApi.list(),
+    queryFn: async (): Promise<InvitationItem[]> => {
+      const response = await api.get<{ data: InvitationItem[] }>("/invitations");
+      return response.data.data;
+    },
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: { email: string; role: string }) =>
-      invitationsApi.create(data),
-    onSuccess: (response) => {
+    mutationFn: async (data: {
+      email: string;
+      role: string;
+    }): Promise<InvitationLinkState> => {
+      const response = await api.post<{
+        data: InvitationLinkState;
+      }>("/invitations", data);
+      return response.data.data;
+    },
+    onSuccess: (response: InvitationLinkState) => {
       queryClient.invalidateQueries({ queryKey: ["invitations"] });
       setLatestInvite({
-        email: response.data.data.email,
-        inviteUrl: response.data.data.inviteUrl,
+        email: response.email,
+        inviteUrl: response.inviteUrl,
       });
       setCopiedLink(false);
       setShowInvite(false);
@@ -54,12 +64,22 @@ export function TeamSettingsPage() {
   });
 
   const resendMutation = useMutation({
-    mutationFn: ({ id, email }: { id: string; email: string }) =>
-      invitationsApi.resend(id).then((response) => ({
+    mutationFn: async ({
+      id,
+      email,
+    }: {
+      id: string;
+      email: string;
+    }): Promise<InvitationLinkState> => {
+      const response = await api.post<{
+        data: Pick<InvitationLinkState, "inviteUrl">;
+      }>(`/invitations/${id}/resend`);
+      return {
         email,
         inviteUrl: response.data.data.inviteUrl,
-      })),
-    onSuccess: ({ email, inviteUrl }) => {
+      };
+    },
+    onSuccess: ({ email, inviteUrl }: InvitationLinkState) => {
       queryClient.invalidateQueries({ queryKey: ["invitations"] });
       setLatestInvite({ email, inviteUrl });
       setCopiedLink(false);
@@ -67,12 +87,12 @@ export function TeamSettingsPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => invitationsApi.remove(id),
+    mutationFn: (id: string) => api.delete(`/invitations/${id}`),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["invitations"] }),
   });
 
-  const invitations = invitationsData?.data?.data || [];
+  const invitations = invitationsData || [];
 
   const roleLabels: Record<string, string> = {
     admin: "Admin",
