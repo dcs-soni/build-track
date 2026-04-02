@@ -14,7 +14,7 @@ import {
   Link2,
 } from "lucide-react";
 import {
-  clientPortalApi,
+  api,
   projectUpdatesApi,
   projectsApi,
 } from "@/lib/api";
@@ -38,6 +38,11 @@ interface UpdateItem {
   audience?: string;
   createdAt: string;
   author?: { name: string };
+}
+
+interface ClientPortalResponse {
+  accessToken: string;
+  portalUrl: string;
 }
 
 const TASK_STATUS_COLORS: Record<string, string> = {
@@ -75,25 +80,35 @@ export function ProjectDetailPage() {
   });
 
   const enablePortalMutation = useMutation({
-    mutationFn: () => clientPortalApi.enable(id!),
-    onSuccess: (response) => {
+    mutationFn: async (): Promise<ClientPortalResponse> => {
+      const response = await api.post<{ data: ClientPortalResponse }>(
+        `/client/projects/${id!}/enable`,
+      );
+      return response.data.data;
+    },
+    onSuccess: (response: ClientPortalResponse) => {
       queryClient.invalidateQueries({ queryKey: ["project", id] });
-      setPortalLink(response.data.data.portalUrl);
+      setPortalLink(response.portalUrl);
       setPortalLinkCopied(false);
     },
   });
 
   const regeneratePortalMutation = useMutation({
-    mutationFn: () => clientPortalApi.regenerate(id!),
-    onSuccess: (response) => {
+    mutationFn: async (): Promise<ClientPortalResponse> => {
+      const response = await api.post<{ data: ClientPortalResponse }>(
+        `/client/projects/${id!}/regenerate`,
+      );
+      return response.data.data;
+    },
+    onSuccess: (response: ClientPortalResponse) => {
       queryClient.invalidateQueries({ queryKey: ["project", id] });
-      setPortalLink(response.data.data.portalUrl);
+      setPortalLink(response.portalUrl);
       setPortalLinkCopied(false);
     },
   });
 
   const disablePortalMutation = useMutation({
-    mutationFn: () => clientPortalApi.disable(id!),
+    mutationFn: () => api.post(`/client/projects/${id!}/disable`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project", id] });
       setPortalLink(null);
