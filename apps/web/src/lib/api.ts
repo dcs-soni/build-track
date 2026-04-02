@@ -17,14 +17,14 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      const { refreshToken, logout } = useAuthStore.getState();
+      const { refreshToken, updateTokens, logout } = useAuthStore.getState();
       if (refreshToken && !error.config._retry) {
         error.config._retry = true;
         try {
           const { data } = await axios.post("/api/v1/auth/refresh", {
             refreshToken,
           });
-          useAuthStore.getState().setAuth(useAuthStore.getState().user!, {
+          updateTokens({
             accessToken: data.data.accessToken,
             refreshToken: data.data.refreshToken,
           });
@@ -51,6 +51,22 @@ export const authApi = {
     tenantName?: string;
   }) => api.post("/auth/register", data),
   me: () => api.get("/auth/me"),
+};
+
+export const invitationsApi = {
+  list: () => api.get("/invitations"),
+  create: (data: { email: string; role: string }) =>
+    api.post("/invitations", data),
+  resend: (id: string) => api.post(`/invitations/${id}/resend`),
+  remove: (id: string) => api.delete(`/invitations/${id}`),
+};
+
+export const clientPortalApi = {
+  enable: (projectId: string) => api.post(`/client/projects/${projectId}/enable`),
+  disable: (projectId: string) =>
+    api.post(`/client/projects/${projectId}/disable`),
+  regenerate: (projectId: string) =>
+    api.post(`/client/projects/${projectId}/regenerate`),
 };
 
 // Projects API
