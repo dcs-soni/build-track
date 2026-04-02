@@ -1,13 +1,9 @@
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import { idParamSchema } from "../schemas/common.schema.js";
-import crypto, { createHash } from "crypto";
+import crypto from "node:crypto";
 import { requireRole } from "../plugins/authorize.plugin.js";
-
-/** Hash a token with SHA-256 for storage — plaintext is only sent to the invitee */
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
+import { hashToken, issueRefreshToken } from "../utils/token.util.js";
 
 const createInvitationSchema = z.object({
   email: z.string().email(),
@@ -122,7 +118,15 @@ export const invitationRoutes: FastifyPluginAsync = async (fastify) => {
 
       return reply.status(201).send({
         success: true,
-        data: { ...invitation, inviteUrl },
+        data: {
+          id: invitation.id,
+          email: invitation.email,
+          role: invitation.role,
+          expiresAt: invitation.expiresAt,
+          createdAt: invitation.createdAt,
+          tenant: invitation.tenant,
+          inviteUrl,
+        },
         message: "Invitation created. In production, an email would be sent.",
       });
     },
@@ -233,13 +237,24 @@ export const invitationRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      await tx.tenantMembership.create({
-        data: {
-          tenantId: invitation.tenantId,
-          userId: user.id,
-          role: invitation.role,
+      const existingMembership = await tx.tenantMembership.findUnique({
+        where: {
+          tenantId_userId: {
+            tenantId: invitation.tenantId,
+            userId: user.id,
+          },
         },
       });
+
+      if (!existingMembership) {
+        await tx.tenantMembership.create({
+          data: {
+            tenantId: invitation.tenantId,
+            userId: user.id,
+            role: invitation.role,
+          },
+        });
+      }
 
       await tx.invitation.update({
         where: { id: invitation.id },
@@ -254,6 +269,10 @@ export const invitationRoutes: FastifyPluginAsync = async (fastify) => {
       { sub: acceptedUser.id, tenantId: invitation.tenantId },
       { expiresIn: process.env.JWT_EXPIRES_IN || "15m" },
     );
+    const refreshToken = await issueRefreshToken(
+      fastify.prisma,
+      acceptedUser.id,
+    );
 
     return reply.send({
       success: true,
@@ -263,7 +282,7 @@ export const invitationRoutes: FastifyPluginAsync = async (fastify) => {
           email: acceptedUser.email,
           name: acceptedUser.name,
         },
-        tokens: { accessToken },
+        tokens: { accessToken, refreshToken, expiresIn: 900 },
         tenantId: invitation.tenantId,
       },
     });
@@ -328,7 +347,14 @@ export const invitationRoutes: FastifyPluginAsync = async (fastify) => {
 
       return reply.send({
         success: true,
-        data: { ...updated, inviteUrl },
+        data: {
+          id: updated.id,
+          email: updated.email,
+          role: updated.role,
+          expiresAt: updated.expiresAt,
+          createdAt: updated.createdAt,
+          inviteUrl,
+        },
         message: "Invitation resent with new token.",
       });
     },

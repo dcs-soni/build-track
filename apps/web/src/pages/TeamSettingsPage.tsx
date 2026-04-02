@@ -1,44 +1,73 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserPlus, Mail, Clock, RefreshCw, Trash2 } from "lucide-react";
-import { api } from "@/lib/api";
+import {
+  UserPlus,
+  Mail,
+  Clock,
+  RefreshCw,
+  Trash2,
+  Copy,
+  Check,
+  Link2,
+} from "lucide-react";
+import { invitationsApi } from "@/lib/api";
 
 interface InvitationItem {
   id: string;
   email: string;
   role: string;
-  status: string;
   createdAt: string;
   expiresAt?: string;
   inviter?: { name: string };
 }
 
+interface InvitationLinkState {
+  email: string;
+  inviteUrl: string;
+}
+
 export function TeamSettingsPage() {
   const [showInvite, setShowInvite] = useState(false);
+  const [latestInvite, setLatestInvite] = useState<InvitationLinkState | null>(
+    null,
+  );
+  const [copiedLink, setCopiedLink] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: invitationsData, isLoading } = useQuery({
     queryKey: ["invitations"],
-    queryFn: () => api.get("/invitations"),
+    queryFn: () => invitationsApi.list(),
   });
 
   const createMutation = useMutation({
     mutationFn: (data: { email: string; role: string }) =>
-      api.post("/invitations", data),
-    onSuccess: () => {
+      invitationsApi.create(data),
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["invitations"] });
+      setLatestInvite({
+        email: response.data.data.email,
+        inviteUrl: response.data.data.inviteUrl,
+      });
+      setCopiedLink(false);
       setShowInvite(false);
     },
   });
 
   const resendMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/invitations/${id}/resend`),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["invitations"] }),
+    mutationFn: ({ id, email }: { id: string; email: string }) =>
+      invitationsApi.resend(id).then((response) => ({
+        email,
+        inviteUrl: response.data.data.inviteUrl,
+      })),
+    onSuccess: ({ email, inviteUrl }) => {
+      queryClient.invalidateQueries({ queryKey: ["invitations"] });
+      setLatestInvite({ email, inviteUrl });
+      setCopiedLink(false);
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/invitations/${id}`),
+    mutationFn: (id: string) => invitationsApi.remove(id),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["invitations"] }),
   });
@@ -51,6 +80,17 @@ export function TeamSettingsPage() {
     member: "Team Member",
     viewer: "Viewer",
     client: "Client",
+  };
+
+  const copyInviteLink = async () => {
+    if (!latestInvite?.inviteUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(latestInvite.inviteUrl);
+      setCopiedLink(true);
+    } catch {
+      setCopiedLink(false);
+    }
   };
 
   return (
@@ -81,6 +121,37 @@ export function TeamSettingsPage() {
             Invite Member
           </button>
         </div>
+
+        {latestInvite && (
+          <div className="mb-6 border border-[#A68B5B]/30 bg-[#A68B5B]/5 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs tracking-[0.15em] text-[#A68B5B] uppercase mb-2">
+                  Invitation Link Ready
+                </p>
+                <p className="text-sm text-white">{latestInvite.email}</p>
+                <p className="text-xs text-[#718096] mt-1">
+                  Email delivery is not wired yet, so share this link directly.
+                </p>
+              </div>
+              <button
+                onClick={copyInviteLink}
+                className="inline-flex items-center gap-2 px-3 py-2 border border-[#A68B5B]/30 text-[#A68B5B] text-xs uppercase tracking-[0.1em] hover:bg-[#A68B5B]/10 transition-colors"
+              >
+                {copiedLink ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                {copiedLink ? "Copied" : "Copy Link"}
+              </button>
+            </div>
+            <div className="mt-3 flex items-center gap-2 border border-[#1A1A1A] bg-[#111111] px-3 py-2 text-xs text-[#E1E1E1]">
+              <Link2 className="h-3.5 w-3.5 text-[#A68B5B]" />
+              <span className="truncate">{latestInvite.inviteUrl}</span>
+            </div>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -124,7 +195,9 @@ export function TeamSettingsPage() {
                   </span>
                   <div className="flex items-center gap-1 border-l border-[#1A1A1A] pl-3 ml-1">
                     <button
-                      onClick={() => resendMutation.mutate(inv.id)}
+                      onClick={() =>
+                        resendMutation.mutate({ id: inv.id, email: inv.email })
+                      }
                       disabled={resendMutation.isPending}
                       className="p-2 text-[#4A5568] hover:text-[#A68B5B] transition-colors disabled:opacity-50"
                       title="Resend invitation"
