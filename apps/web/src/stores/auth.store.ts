@@ -20,7 +20,7 @@ interface AuthState {
     tokens: { accessToken: string; refreshToken: string },
     tenantId?: string,
   ) => void;
-  restoreAuth: (user: User, tenantId?: string) => void;
+  restoreAuth: (user: User, tenantId?: string | null) => void;
   updateTokens: (tokens: {
     accessToken: string;
     refreshToken?: string | null;
@@ -62,7 +62,7 @@ export const useAuthStore = create<AuthState>()(
           user,
           isAuthenticated: !!state.accessToken,
           isLoading: false,
-          currentTenantId: tenantId || state.currentTenantId || null,
+          currentTenantId: tenantId !== undefined ? tenantId : state.currentTenantId,
         })),
       updateTokens: (tokens) =>
         set((state) => ({

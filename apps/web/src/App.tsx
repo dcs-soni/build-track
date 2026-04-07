@@ -176,7 +176,10 @@ function AuthBootstrap() {
         if (cancelled) return;
 
         const profile = response.data.data;
-        const tenantId = currentTenantId || profile.memberships?.[0]?.tenantId;
+        const tenantId =
+          profile.memberships?.find((m: { tenantId: string }) => m.tenantId === currentTenantId)?.tenantId ??
+          profile.memberships?.[0]?.tenantId ??
+          null;
         restoreAuth(profile, tenantId);
       })
       .catch(() => {
