@@ -73,6 +73,42 @@ const approveSchema = z.object({
   approvedCost: z.number().optional(),
 });
 
+async function validateBudgetItemIds(
+  fastify: {
+    prisma: {
+      budgetItem: {
+        findMany: (args: {
+          where: {
+            id: { in: string[] };
+            tenantId: string;
+            projectId: string;
+          };
+          select: { id: true };
+        }) => Promise<Array<{ id: string }>>;
+      };
+    };
+  },
+  tenantId: string,
+  projectId: string,
+  budgetItemIds: string[],
+): Promise<boolean> {
+  if (budgetItemIds.length === 0) {
+    return true;
+  }
+
+  const uniqueIds = Array.from(new Set(budgetItemIds));
+  const validBudgetItems = await fastify.prisma.budgetItem.findMany({
+    where: {
+      id: { in: uniqueIds },
+      tenantId,
+      projectId,
+    },
+    select: { id: true },
+  });
+
+  return validBudgetItems.length === uniqueIds.length;
+}
+
 // ─── Route Plugin ────────────────────────────────────────────────────────────
 
 export const changeOrderRoutes: FastifyPluginAsync = async (fastify) => {
@@ -185,6 +221,25 @@ export const changeOrderRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(404).send({
         success: false,
         error: { code: "NOT_FOUND", message: "Project not found" },
+      });
+    }
+
+    const isValidBudgetMapping = await validateBudgetItemIds(
+      fastify,
+      tenantId,
+      body.projectId,
+      (body.items ?? [])
+        .map((item) => item.budgetItemId)
+        .filter((budgetItemId): budgetItemId is string => !!budgetItemId),
+    );
+
+    if (!isValidBudgetMapping) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "INVALID_BUDGET_ITEM",
+          message: "Each linked budget item must belong to this project",
+        },
       });
     }
 
@@ -349,8 +404,12 @@ export const changeOrderRoutes: FastifyPluginAsync = async (fastify) => {
       // Update linked budget items' actual costs
       for (const item of existing.items) {
         if (item.budgetItemId) {
-          await tx.budgetItem.update({
-            where: { id: item.budgetItemId },
+          await tx.budgetItem.updateMany({
+            where: {
+              id: item.budgetItemId,
+              tenantId,
+              projectId: existing.projectId,
+            },
             data: { actualCost: { increment: Number(item.totalCost) } },
           });
         }
@@ -426,6 +485,25 @@ export const changeOrderRoutes: FastifyPluginAsync = async (fastify) => {
           message: "Change order not found or cannot be modified",
         },
       });
+    }
+
+    if (body.budgetItemId) {
+      const isValidBudgetItem = await validateBudgetItemIds(
+        fastify,
+        tenantId!,
+        co.projectId,
+        [body.budgetItemId],
+      );
+
+      if (!isValidBudgetItem) {
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: "INVALID_BUDGET_ITEM",
+            message: "Budget item must belong to this project",
+          },
+        });
+      }
     }
 
     const quantity = body.quantity ?? 1;
