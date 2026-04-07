@@ -1,9 +1,10 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingSpinner } from "@/components/ui";
+import { authApi } from "@/lib/api";
 
 // Lazy-loaded pages — each is split into its own chunk
 const LandingPage = lazy(() =>
@@ -14,6 +15,16 @@ const LoginPage = lazy(() =>
 );
 const RegisterPage = lazy(() =>
   import("@/pages/RegisterPage").then((m) => ({ default: m.RegisterPage })),
+);
+const InvitationAcceptPage = lazy(() =>
+  import("@/pages/InvitationAcceptPage").then((m) => ({
+    default: m.InvitationAcceptPage,
+  })),
+);
+const ClientPortalPage = lazy(() =>
+  import("@/pages/ClientPortalPage").then((m) => ({
+    default: m.ClientPortalPage,
+  })),
 );
 const DashboardPage = lazy(() =>
   import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
@@ -143,15 +154,56 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function AuthBootstrap() {
+  const { accessToken, user, currentTenantId, restoreAuth, setLoading, logout } =
+    useAuthStore();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!accessToken || user) {
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setLoading(true);
+
+    authApi
+      .me()
+      .then((response) => {
+        if (cancelled) return;
+
+        const profile = response.data.data;
+        const tenantId = currentTenantId || profile.memberships?.[0]?.tenantId;
+        restoreAuth(profile, tenantId);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        logout();
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, currentTenantId, logout, restoreAuth, setLoading, user]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
+      <AuthBootstrap />
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/invite/:token" element={<InvitationAcceptPage />} />
+          <Route path="/client/:token" element={<ClientPortalPage />} />
           <Route path="/sub-portal" element={<SubcontractorPortalPage />} />
 
           {/* Protected Routes */}
