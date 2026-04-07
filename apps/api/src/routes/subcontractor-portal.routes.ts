@@ -20,6 +20,12 @@ const updateProgressSchema = z.object({
 const DUMMY_PORTAL_HASH =
   "$argon2id$v=19$m=65536,t=3,p=4$c29tZXJhbmRvbXNhbHQ$YXJnb24yaWRoYXNob3V0cHV0Zm9yZHVtbXk";
 
+type SubcontractorPortalJwtPayload = {
+  subcontractorId: string;
+  tenantId: string;
+  type: "subcontractor";
+};
+
 /**
  * Verifies a plaintext portal secret against a stored argon2 hash.
  * Always runs the full argon2 computation to prevent timing attacks.
@@ -131,8 +137,7 @@ export const subcontractorPortalRoutes: FastifyPluginAsync = async (
 
     try {
       const token = authHeader.slice(7);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const decoded = fastify.jwt.verify(token) as any;
+      const decoded = fastify.jwt.verify<SubcontractorPortalJwtPayload>(token);
       if (decoded.type !== "subcontractor") {
         return reply.status(403).send({
           success: false,
@@ -154,11 +159,11 @@ export const subcontractorPortalRoutes: FastifyPluginAsync = async (
     "/profile",
     { preHandler: [verifySubToken] },
     async (request, reply) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const subId = (request as any).subcontractorId;
+      const subId = request.subcontractorId;
+      const tenantId = request.tenantId;
 
-      const sub = await fastify.prisma.subcontractor.findUnique({
-        where: { id: subId },
+      const sub = await fastify.prisma.subcontractor.findFirst({
+        where: { id: subId, tenantId },
         select: {
           id: true,
           companyName: true,
@@ -188,10 +193,8 @@ export const subcontractorPortalRoutes: FastifyPluginAsync = async (
     "/tasks",
     { preHandler: [verifySubToken] },
     async (request, reply) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const subId = (request as any).subcontractorId;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const tenantId = (request as any).tenantId;
+      const subId = request.subcontractorId;
+      const tenantId = request.tenantId;
 
       const tasks = await fastify.prisma.task.findMany({
         where: {
@@ -216,13 +219,13 @@ export const subcontractorPortalRoutes: FastifyPluginAsync = async (
       const { taskId } = z
         .object({ taskId: z.string().uuid() })
         .parse(request.params);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const subId = (request as any).subcontractorId;
+      const subId = request.subcontractorId;
+      const tenantId = request.tenantId;
       const body = updateProgressSchema.parse(request.body);
 
       // Verify task belongs to this subcontractor
       const task = await fastify.prisma.task.findFirst({
-        where: { id: taskId, subcontractorId: subId },
+        where: { id: taskId, subcontractorId: subId, tenantId },
       });
 
       if (!task) {

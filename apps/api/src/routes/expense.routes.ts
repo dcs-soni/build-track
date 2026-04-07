@@ -139,6 +139,26 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
+    if (body.budgetItemId) {
+      const budgetItem = await fastify.prisma.budgetItem.findFirst({
+        where: {
+          id: body.budgetItemId,
+          tenantId,
+          projectId: body.projectId,
+        },
+      });
+
+      if (!budgetItem) {
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: "INVALID_BUDGET_ITEM",
+            message: "Budget item does not belong to this project",
+          },
+        });
+      }
+    }
+
     // Create expense and update budget item actual cost
     const expense = await fastify.prisma.$transaction(async (tx) => {
       const exp = await tx.expense.create({
@@ -152,8 +172,12 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
 
       // If linked to budget item, update actual cost
       if (body.budgetItemId) {
-        await tx.budgetItem.update({
-          where: { id: body.budgetItemId },
+        await tx.budgetItem.updateMany({
+          where: {
+            id: body.budgetItemId,
+            tenantId,
+            projectId: body.projectId,
+          },
           data: { actualCost: { increment: body.amount } },
         });
       }
@@ -189,9 +213,30 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
       ),
     );
 
-    const expense = await fastify.prisma.expense.update({
-      where: { id },
-      data: updateData,
+    const expense = await fastify.prisma.$transaction(async (tx) => {
+      if (
+        existing.budgetItemId &&
+        body.amount !== undefined &&
+        body.amount !== Number(existing.amount)
+      ) {
+        await tx.budgetItem.updateMany({
+          where: {
+            id: existing.budgetItemId,
+            tenantId,
+            projectId: existing.projectId,
+          },
+          data: {
+            actualCost: {
+              increment: body.amount - Number(existing.amount),
+            },
+          },
+        });
+      }
+
+      return tx.expense.update({
+        where: { id },
+        data: updateData,
+      });
     });
 
     return reply.send({ success: true, data: expense });
@@ -215,8 +260,12 @@ export const expenseRoutes: FastifyPluginAsync = async (fastify) => {
     // Rollback budget item actual cost if linked
     await fastify.prisma.$transaction(async (tx) => {
       if (existing.budgetItemId) {
-        await tx.budgetItem.update({
-          where: { id: existing.budgetItemId },
+        await tx.budgetItem.updateMany({
+          where: {
+            id: existing.budgetItemId,
+            tenantId,
+            projectId: existing.projectId,
+          },
           data: { actualCost: { decrement: Number(existing.amount) } },
         });
       }

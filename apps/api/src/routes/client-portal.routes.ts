@@ -1,16 +1,12 @@
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
-import crypto, { createHash } from "crypto";
+import crypto from "node:crypto";
 import { z } from "zod";
 import { projectIdParamSchema } from "../schemas/common.schema.js";
+import { hashToken } from "../utils/token.util.js";
 
 const tokenParamSchema = z.object({
   token: z.string().min(1, "Token is required"),
 });
-
-/** Hash a token with SHA-256 for storage */
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
 
 export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
   // Auth hook for admin routes
@@ -60,7 +56,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const portalUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/client/${accessToken}`;
+      const portalUrl = `${process.env.FRONTEND_URL || process.env.CORS_ORIGIN || "http://localhost:3000"}/client/${accessToken}`;
 
       return reply.send({ success: true, data: { accessToken, portalUrl } });
     },
@@ -108,7 +104,7 @@ export const clientPortalRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const portalUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/client/${newToken}`;
+      const portalUrl = `${process.env.FRONTEND_URL || process.env.CORS_ORIGIN || "http://localhost:3000"}/client/${newToken}`;
 
       return reply.send({
         success: true,
